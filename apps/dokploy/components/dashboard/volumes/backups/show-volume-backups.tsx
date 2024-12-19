@@ -6,7 +6,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { DatabaseBackup } from "lucide-react";
+import { ArchiveRestore } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { VolumeEntry } from "./volume-entry";
@@ -48,7 +48,7 @@ export const ShowVolumeBackups = ({ volumeId }: Props) => {
 			<CardContent className="flex flex-col gap-4">
 				{volumes.length === 0 ? (
 					<div className="flex w-full flex-col items-center justify-center gap-3 pt-10">
-						<DatabaseBackup className="size-8 text-muted-foreground" />
+						<ArchiveRestore className="size-8 text-muted-foreground" />
 						<span className="text-base text-muted-foreground">
 							No volumes found
 						</span>
