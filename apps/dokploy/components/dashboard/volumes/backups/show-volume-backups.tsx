@@ -24,8 +24,36 @@ interface Props {
 }
 
 export const ShowVolumeBackups = ({ volumeId }: Props) => {
-	// Will implement data fetching later
-	const volumes: Volume[] = [];
+	// Mock data for testing UI components
+	const volumes: Volume[] = [
+		{
+			id: "vol_1",
+			name: "postgres_data",
+			size: "2.5GB",
+			lastBackup: "2024-01-15 14:30:00",
+			status: "in-use"
+		},
+		{
+			id: "vol_2",
+			name: "redis_data",
+			size: "1.2GB",
+			status: "available"
+		},
+		{
+			id: "vol_3",
+			name: "elasticsearch_data",
+			size: "5.0GB",
+			lastBackup: "2024-01-10 09:15:00",
+			status: "error"
+		},
+		{
+			id: "vol_4",
+			name: "mongodb_data",
+			size: "3.8GB",
+			lastBackup: "2024-01-14 23:45:00",
+			status: "in-use"
+		}
+	];
 
 	const handleBackup = (volume: Volume) => {
 		toast.info("Backup functionality coming soon");
