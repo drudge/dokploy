@@ -26,20 +26,14 @@ export const VolumeActions = ({ volume, onBackup, onRestore }: Props) => {
 
 	const handleBackup = async () => {
 		// Will fetch containers using this volume later
-		setContainers([
-			{ id: "1", name: "container-1", status: "running" },
-			{ id: "2", name: "container-2", status: "running" },
-		]);
+		setContainers([{ id: "1", name: "postgresql", status: "running" }]);
 		setOperation("backup");
 		setModalOpen(true);
 	};
 
 	const handleRestore = async () => {
 		// Will fetch containers using this volume later
-		setContainers([
-			{ id: "1", name: "container-1", status: "running" },
-			{ id: "2", name: "container-2", status: "running" },
-		]);
+		setContainers([{ id: "1", name: "postgresql", status: "running" }]);
 		setOperation("restore");
 		setModalOpen(true);
 	};
@@ -73,6 +67,8 @@ export const VolumeActions = ({ volume, onBackup, onRestore }: Props) => {
 				containers={containers}
 				onConfirm={handleConfirm}
 				operation={operation}
+				volumeName={volume.name}
+				volumeSize={volume.size}
 			/>
 		</>
 	);

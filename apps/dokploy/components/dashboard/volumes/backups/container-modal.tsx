@@ -1,4 +1,5 @@
 import { AlertBlock } from "@/components/shared/alert-block";
+import { StatusTooltip } from "@/components/shared/status-tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,41 +45,52 @@ export const ContainerModal = ({
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
 			<DialogContent>
 				<DialogHeader>
-					<div className="flex items-center justify-between">
-						<DialogTitle>
-							{operation.charAt(0).toUpperCase()}
-							{operation.slice(1)} Volume - {volumeName}
-						</DialogTitle>
-						<Badge variant="secondary">{volumeSize}</Badge>
+					<div className="flex flex-col space-y-2">
+						<div className="flex items-center space-x-2">
+							<DialogTitle className="text-xl">
+								{operation.charAt(0).toUpperCase()}
+								{operation.slice(1)} Volume{" "}
+								{volumeName ? `- ${volumeName}` : ""}
+							</DialogTitle>
+							{volumeSize && (
+								<Badge variant="secondary" className="h-6 px-2 font-normal">
+									{volumeSize}
+								</Badge>
+							)}
+						</div>
+						<DialogDescription>
+							The following containers are using this volume:
+						</DialogDescription>
 					</div>
-					<DialogDescription>
-						The following containers are using volumes that will be {operation}d
-					</DialogDescription>
 				</DialogHeader>
 				<div className="py-4">
 					<AlertBlock type="warning">
-						We recommend stopping containers during {operation} to prevent data corruption.
+						We recommend stopping containers during {operation} to prevent any
+						possible data corruption.
 					</AlertBlock>
 					<div className="flex flex-col gap-4 mt-4">
 						<div className="flex flex-col gap-2">
 							{containers.map((container) => (
 								<div
 									key={container.id}
-									className="flex items-center justify-between border rounded-md p-3"
+									className="flex items-center space-x-3 border rounded-md p-3"
 								>
+									<div
+										className="h-2 w-2 rounded-full bg-emerald-500"
+										aria-hidden="true"
+										title={container.status}
+									/>
 									<span className="font-medium">{container.name}</span>
-									<span className="text-sm text-muted-foreground">
-										{container.status}
-									</span>
 								</div>
 							))}
 						</div>
 						<div className="flex flex-col gap-2 border-t pt-4">
 							<div className="flex items-center justify-between space-x-2">
 								<div className="space-y-1">
-									<Label htmlFor="stop-containers">Stop for backup</Label>
+									<Label htmlFor="stop-containers">Stop for {operation}</Label>
 									<p className="text-sm text-muted-foreground">
-										Containers will automatically restart when backup completes
+										Containers will automatically restart when {operation}{" "}
+										completes
 									</p>
 								</div>
 								<Switch
