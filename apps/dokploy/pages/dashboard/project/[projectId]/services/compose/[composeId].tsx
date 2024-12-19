@@ -47,7 +47,8 @@ type TabState =
 	| "advanced"
 	| "deployments"
 	| "domains"
-	| "monitoring";
+	| "monitoring"
+	| "backups";
 
 const Service = (
 	props: InferGetServerSidePropsType<typeof getServerSideProps>,
@@ -199,10 +200,10 @@ const Service = (
 						<TabsList
 							className={cn(
 								"md:grid md:w-fit max-md:overflow-y-scroll justify-start",
-								data?.serverId ? "md:grid-cols-6" : "md:grid-cols-7",
-								data?.composeType === "docker-compose" ? "" : "md:grid-cols-6",
+								data?.serverId ? "md:grid-cols-7" : "md:grid-cols-8",
+								data?.composeType === "docker-compose" ? "" : "md:grid-cols-7",
 								data?.serverId && data?.composeType === "stack"
-									? "md:grid-cols-5"
+									? "md:grid-cols-6"
 									: "",
 							)}
 						>
@@ -213,6 +214,7 @@ const Service = (
 							{!data?.serverId && (
 								<TabsTrigger value="monitoring">Monitoring</TabsTrigger>
 							)}
+							<TabsTrigger value="backups">Backups</TabsTrigger>
 							<TabsTrigger value="logs">Logs</TabsTrigger>
 							<TabsTrigger value="deployments">Deployments</TabsTrigger>
 							<TabsTrigger value="domains">Domains</TabsTrigger>
@@ -274,6 +276,11 @@ const Service = (
 						<div className="flex flex-col gap-4 pt-2.5">
 							<AddCommandCompose composeId={composeId} />
 							<ShowVolumesCompose composeId={composeId} />
+						</div>
+					</TabsContent>
+					<TabsContent value="backups">
+						<div className="flex flex-col gap-4 pt-2.5">
+							<ShowVolumeBackups composeId={composeId} />
 						</div>
 					</TabsContent>
 				</Tabs>
