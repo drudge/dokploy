@@ -1,3 +1,4 @@
+import { AlertBlock } from "@/components/shared/alert-block";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -11,12 +12,13 @@ import React from "react";
 import { toast } from "sonner";
 import { VolumeEntry } from "./volume-entry";
 
-interface Volume {
+export interface Volume {
 	id: string;
 	name: string;
 	size: string;
 	lastBackup?: string;
 	status: "available" | "in-use" | "error";
+	services?: string[];
 }
 
 interface Props {
@@ -30,28 +32,33 @@ export const ShowVolumeBackups = ({ volumeId }: Props) => {
 			id: "vol_1",
 			name: "postgres_data",
 			size: "2.5GB",
-			lastBackup: "2024-01-15 14:30:00",
+			lastBackup: "2024-01-19 10:30:00",
 			status: "in-use",
+			services: ["postgres", "backup-service"],
 		},
 		{
 			id: "vol_2",
 			name: "redis_data",
 			size: "1.2GB",
+			lastBackup: "2024-01-18 15:45:00",
 			status: "available",
+			services: ["redis"],
 		},
 		{
 			id: "vol_3",
 			name: "elasticsearch_data",
 			size: "5.0GB",
-			lastBackup: "2024-01-10 09:15:00",
-			status: "error",
+			lastBackup: "2024-01-17 09:15:00",
+			status: "in-use",
+			services: ["elasticsearch", "backup-service"],
 		},
 		{
 			id: "vol_4",
 			name: "mongodb_data",
 			size: "3.8GB",
-			lastBackup: "2024-01-14 23:45:00",
+			lastBackup: "2024-01-16 23:45:00",
 			status: "in-use",
+			services: ["mongodb"],
 		},
 	];
 
@@ -74,6 +81,11 @@ export const ShowVolumeBackups = ({ volumeId }: Props) => {
 				</div>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
+				<AlertBlock type="info">
+					Volumes are automatically detected from your Docker Compose
+					configuration. Configure backup settings to enable automatic backups
+					to S3.
+				</AlertBlock>
 				{volumes.length === 0 ? (
 					<div className="flex w-full flex-col items-center justify-center gap-3 pt-10">
 						<ArchiveRestore className="size-8 text-muted-foreground" />
