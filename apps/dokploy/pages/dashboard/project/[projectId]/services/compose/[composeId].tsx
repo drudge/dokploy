@@ -7,8 +7,8 @@ import { ShowEnvironmentCompose } from "@/components/dashboard/compose/enviromen
 import { ShowGeneralCompose } from "@/components/dashboard/compose/general/show";
 import { ShowDockerLogsCompose } from "@/components/dashboard/compose/logs/show";
 import { ShowMonitoringCompose } from "@/components/dashboard/compose/monitoring/show";
-import { ShowVolumeBackups } from "@/components/dashboard/volumes/backups/show-volume-backups";
 import { UpdateCompose } from "@/components/dashboard/compose/update-compose";
+import { ShowVolumeBackups } from "@/components/dashboard/volumes/backups/show-volume-backups";
 import { ProjectLayout } from "@/components/layouts/project-layout";
 import { StatusTooltip } from "@/components/shared/status-tooltip";
 import { Badge } from "@/components/ui/badge";
