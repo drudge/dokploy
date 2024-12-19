@@ -45,7 +45,10 @@ export const ContainerModal = ({
 			<DialogContent>
 				<DialogHeader>
 					<div className="flex items-center justify-between">
-						<DialogTitle>{operation.charAt(0).toUpperCase()}{operation.slice(1)} Volume - {volumeName}</DialogTitle>
+						<DialogTitle>
+							{operation.charAt(0).toUpperCase()}
+							{operation.slice(1)} Volume - {volumeName}
+						</DialogTitle>
 						<Badge variant="secondary">{volumeSize}</Badge>
 					</div>
 					<DialogDescription>
@@ -54,8 +57,7 @@ export const ContainerModal = ({
 				</DialogHeader>
 				<div className="py-4">
 					<AlertBlock type="warning">
-						It is recommended to stop containers during volume {operation}s to
-						avoid data corruption or conflicts due to concurrent access.
+						We recommend stopping containers during {operation} to prevent data corruption.
 					</AlertBlock>
 					<div className="flex flex-col gap-4 mt-4">
 						<div className="flex flex-col gap-2">
@@ -96,7 +98,10 @@ export const ContainerModal = ({
 					>
 						Cancel
 					</Button>
-					<Button onClick={() => onConfirm(stopContainers)}>Start {operation.charAt(0).toUpperCase()}{operation.slice(1)}</Button>
+					<Button onClick={() => onConfirm(stopContainers)}>
+						Start {operation.charAt(0).toUpperCase()}
+						{operation.slice(1)}
+					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
