@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -34,6 +33,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { HelpCircle, Settings2 } from "lucide-react";
+import { useEffect } from "react";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -47,10 +47,12 @@ const VolumeBackupConfigSchema = z.object({
 	scheduleType: z.enum(["daily", "weekly", "monthly", "custom"]),
 	schedule: z.string().min(1, "Schedule required"),
 	selectedDays: z.array(z.string()).optional(),
-	hour: z.string()
+	hour: z
+		.string()
 		.regex(/^([0-1]?[0-9]|2[0-3])$/, "Invalid hour format")
 		.optional(),
-	minute: z.string()
+	minute: z
+		.string()
 		.regex(/^[0-5]?[0-9]$/, "Invalid minute format")
 		.optional(),
 	enabled: z.boolean(),
@@ -215,25 +217,25 @@ export const ConfigurationDialog = ({
 															</p>
 															<ul className="text-sm text-muted-foreground space-y-1">
 																<li>
-																	<code>{'{name}'}</code> - Volume name
+																	<code>{"{name}"}</code> - Volume name
 																</li>
 																<li>
-																	<code>{'{year}'}</code> - Year (e.g., 2024)
+																	<code>{"{year}"}</code> - Year (e.g., 2024)
 																</li>
 																<li>
-																	<code>{'{month}'}</code> - Month (01-12)
+																	<code>{"{month}"}</code> - Month (01-12)
 																</li>
 																<li>
-																	<code>{'{day}'}</code> - Day (01-31)
+																	<code>{"{day}"}</code> - Day (01-31)
 																</li>
 																<li>
-																	<code>{'{hour}'}</code> - Hour (00-23)
+																	<code>{"{hour}"}</code> - Hour (00-23)
 																</li>
 																<li>
-																	<code>{'{minute}'}</code> - Minute (00-59)
+																	<code>{"{minute}"}</code> - Minute (00-59)
 																</li>
 																<li>
-																	<code>{'{second}'}</code> - Second (00-59)
+																	<code>{"{second}"}</code> - Second (00-59)
 																</li>
 															</ul>
 														</div>
@@ -250,7 +252,7 @@ export const ConfigurationDialog = ({
 											<FormDescription>
 												<span className="italic">
 													Example: {volume.name}-
-													{`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
+													{`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`}
 													.tgz
 												</span>
 											</FormDescription>
@@ -293,7 +295,7 @@ export const ConfigurationDialog = ({
 									)}
 								/>
 
-								{scheduleType !== 'custom' && (
+								{scheduleType !== "custom" && (
 									<div className="grid grid-cols-2 gap-2">
 										<FormField
 											control={form.control}
@@ -313,9 +315,9 @@ export const ConfigurationDialog = ({
 																{Array.from({ length: 24 }, (_, i) => (
 																	<SelectItem
 																		key={i}
-																		value={i.toString().padStart(2, '0')}
+																		value={i.toString().padStart(2, "0")}
 																	>
-																		{i.toString().padStart(2, '0')}
+																		{i.toString().padStart(2, "0")}
 																	</SelectItem>
 																))}
 															</SelectContent>
@@ -343,9 +345,9 @@ export const ConfigurationDialog = ({
 																{Array.from({ length: 60 }, (_, i) => (
 																	<SelectItem
 																		key={i}
-																		value={i.toString().padStart(2, '0')}
+																		value={i.toString().padStart(2, "0")}
 																	>
-																		{i.toString().padStart(2, '0')}
+																		{i.toString().padStart(2, "0")}
 																	</SelectItem>
 																))}
 															</SelectContent>
@@ -358,7 +360,7 @@ export const ConfigurationDialog = ({
 									</div>
 								)}
 
-								{scheduleType === 'weekly' && (
+								{scheduleType === "weekly" && (
 									<FormField
 										control={form.control}
 										name="selectedDays"
@@ -374,7 +376,7 @@ export const ConfigurationDialog = ({
 															{ value: "4", label: "Thu" },
 															{ value: "5", label: "Fri" },
 															{ value: "6", label: "Sat" },
-															{ value: "0", label: "Sun" }
+															{ value: "0", label: "Sun" },
 														].map((day) => (
 															<Button
 																key={day.value}
@@ -392,7 +394,9 @@ export const ConfigurationDialog = ({
 																	if (index === -1) {
 																		field.onChange([...newValue, day.value]);
 																	} else {
-																		field.onChange(newValue.filter((d) => d !== day.value));
+																		field.onChange(
+																			newValue.filter((d) => d !== day.value),
+																		);
 																	}
 																}}
 															>
@@ -407,7 +411,7 @@ export const ConfigurationDialog = ({
 									/>
 								)}
 
-								{scheduleType === 'custom' && (
+								{scheduleType === "custom" && (
 									<FormField
 										control={form.control}
 										name="schedule"
@@ -422,7 +426,8 @@ export const ConfigurationDialog = ({
 													/>
 												</FormControl>
 												<FormDescription>
-													Enter a custom cron expression for more specific scheduling needs
+													Enter a custom cron expression for more specific
+													scheduling needs
 												</FormDescription>
 												<FormMessage />
 											</FormItem>
