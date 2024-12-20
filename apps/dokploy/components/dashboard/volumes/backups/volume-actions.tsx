@@ -110,7 +110,10 @@ export const ConfigurationDialog = ({
 				</DialogDescription>
 			</DialogHeader>
 			<Form {...form}>
-				<form onSubmit={form.handleSubmit(onSubmit)} className="grid w-full gap-8">
+				<form
+					onSubmit={form.handleSubmit(onSubmit)}
+					className="grid w-full gap-8"
+				>
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-2">
 							<h3 className="text-sm font-medium">Destination Settings</h3>
@@ -133,7 +136,9 @@ export const ConfigurationDialog = ({
 														Hetzner - Cascade
 													</SelectItem>
 													<SelectItem value="aws">AWS S3</SelectItem>
-													<SelectItem value="do">DigitalOcean Spaces</SelectItem>
+													<SelectItem value="do">
+														DigitalOcean Spaces
+													</SelectItem>
 												</SelectContent>
 											</Select>
 										</FormControl>
@@ -148,7 +153,10 @@ export const ConfigurationDialog = ({
 									<FormItem>
 										<FormLabel>Prefix</FormLabel>
 										<FormControl>
-											<Input placeholder="backups/volumes/my-volume" {...field} />
+											<Input
+												placeholder="backups/volumes/my-volume"
+												{...field}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -276,23 +284,38 @@ export const ConfigurationDialog = ({
 										<FormItem>
 											<FormLabel>Days</FormLabel>
 											<FormControl>
-												<Select
-													defaultValue={field.value?.[0]}
-													onValueChange={(value) => field.onChange([value])}
-												>
-													<SelectTrigger>
-														<SelectValue placeholder="Select days" />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="0">Sunday</SelectItem>
-														<SelectItem value="1">Monday</SelectItem>
-														<SelectItem value="2">Tuesday</SelectItem>
-														<SelectItem value="3">Wednesday</SelectItem>
-														<SelectItem value="4">Thursday</SelectItem>
-														<SelectItem value="5">Friday</SelectItem>
-														<SelectItem value="6">Saturday</SelectItem>
-													</SelectContent>
-												</Select>
+												<div className="flex flex-wrap gap-2">
+													{[
+														{ value: "0", label: "Sun" },
+														{ value: "1", label: "Mon" },
+														{ value: "2", label: "Tue" },
+														{ value: "3", label: "Wed" },
+														{ value: "4", label: "Thu" },
+														{ value: "5", label: "Fri" },
+														{ value: "6", label: "Sat" },
+													].map(({ value, label }) => (
+														<Button
+															key={value}
+															type="button"
+															size="sm"
+															variant={
+																field.value?.includes(value)
+																	? "default"
+																	: "outline"
+															}
+															className="min-w-[3rem]"
+															onClick={() => {
+																const current = field.value || [];
+																const updated = current.includes(value)
+																	? current.filter((v) => v !== value)
+																	: [...current, value];
+																field.onChange(updated);
+															}}
+														>
+															{label}
+														</Button>
+													))}
+												</div>
 											</FormControl>
 											<FormMessage />
 										</FormItem>
@@ -314,7 +337,8 @@ export const ConfigurationDialog = ({
 												/>
 											</FormControl>
 											<FormDescription>
-												Use cron syntax (e.g., "0 0 * * *" for daily at midnight)
+												Use cron syntax (e.g., "0 0 * * *" for daily at
+												midnight)
 											</FormDescription>
 											<FormMessage />
 										</FormItem>
