@@ -124,7 +124,7 @@ export const ConfigurationDialog = ({
 											defaultValue={field.value}
 											onValueChange={field.onChange}
 										>
-											<SelectTrigger className="mt-1.5">
+											<SelectTrigger>
 												<SelectValue placeholder="Select destination" />
 											</SelectTrigger>
 											<SelectContent>
@@ -146,7 +146,6 @@ export const ConfigurationDialog = ({
 									<FormLabel>Prefix</FormLabel>
 									<FormControl>
 										<Input
-											className="mt-1.5"
 											placeholder="backups/volumes/my-volume"
 											{...field}
 										/>
@@ -163,7 +162,7 @@ export const ConfigurationDialog = ({
 									<FormLabel>Filename Pattern</FormLabel>
 									<FormControl>
 										<Input
-											className="mt-1.5 font-mono"
+											className="font-mono"
 											placeholder="{{name}}-{{YYYYMMDD}}-{{HHmmss}}.tgz"
 											{...field}
 										/>
@@ -187,7 +186,7 @@ export const ConfigurationDialog = ({
 											defaultValue={field.value}
 											onValueChange={field.onChange}
 										>
-											<SelectTrigger className="mt-1.5">
+												<SelectTrigger>
 												<SelectValue placeholder="Select frequency" />
 											</SelectTrigger>
 											<SelectContent>
@@ -217,7 +216,7 @@ export const ConfigurationDialog = ({
 													defaultValue={field.value}
 													onValueChange={field.onChange}
 												>
-													<SelectTrigger className="mt-1.5">
+													<SelectTrigger>
 														<SelectValue placeholder="Select hour" />
 													</SelectTrigger>
 													<SelectContent>
@@ -247,7 +246,7 @@ export const ConfigurationDialog = ({
 													defaultValue={field.value}
 													onValueChange={field.onChange}
 												>
-													<SelectTrigger className="mt-1.5">
+													<SelectTrigger>
 														<SelectValue placeholder="Select minute" />
 													</SelectTrigger>
 													<SelectContent>
@@ -280,7 +279,7 @@ export const ConfigurationDialog = ({
 												defaultValue={field.value?.[0]}
 												onValueChange={(value) => field.onChange([value])}
 											>
-												<SelectTrigger className="mt-1.5">
+												<SelectTrigger>
 													<SelectValue placeholder="Select days" />
 												</SelectTrigger>
 												<SelectContent>
