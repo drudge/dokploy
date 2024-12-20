@@ -110,186 +110,30 @@ export const ConfigurationDialog = ({
 				</DialogDescription>
 			</DialogHeader>
 			<Form {...form}>
-				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-					<Card className="p-4 space-y-4">
-						<h3 className="text-sm font-medium">Destination Settings</h3>
-						<FormField
-							control={form.control}
-							name="destinationId"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Destination</FormLabel>
-									<FormControl>
-										<Select
-											defaultValue={field.value}
-											onValueChange={field.onChange}
-										>
-											<SelectTrigger>
-												<SelectValue placeholder="Select destination" />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="hetzner">Hetzner - Cascade</SelectItem>
-												<SelectItem value="aws">AWS S3</SelectItem>
-												<SelectItem value="do">DigitalOcean Spaces</SelectItem>
-											</SelectContent>
-										</Select>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="prefix"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Prefix</FormLabel>
-									<FormControl>
-										<Input
-											placeholder="backups/volumes/my-volume"
-											{...field}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="filenamePattern"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Filename Pattern</FormLabel>
-									<FormControl>
-										<Input
-											className="font-mono"
-											placeholder="{{name}}-{{YYYYMMDD}}-{{HHmmss}}.tgz"
-											{...field}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-					</Card>
-
-					<Card className="p-4 space-y-4">
-						<h3 className="text-sm font-medium">Schedule Settings</h3>
-						<FormField
-							control={form.control}
-							name="scheduleType"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Schedule Type</FormLabel>
-									<FormControl>
-										<Select
-											defaultValue={field.value}
-											onValueChange={field.onChange}
-										>
-												<SelectTrigger>
-												<SelectValue placeholder="Select frequency" />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="hourly">Hourly</SelectItem>
-												<SelectItem value="daily">Daily</SelectItem>
-												<SelectItem value="weekly">Weekly</SelectItem>
-												<SelectItem value="monthly">Monthly</SelectItem>
-												<SelectItem value="custom">Custom (cron)</SelectItem>
-											</SelectContent>
-										</Select>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						{/* Time selection for non-custom schedules */}
-						{form.watch("scheduleType") !== "custom" && (
-							<div className="grid grid-cols-2 gap-2">
-								<FormField
-									control={form.control}
-									name="hour"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Hour</FormLabel>
-											<FormControl>
-												<Select
-													defaultValue={field.value}
-													onValueChange={field.onChange}
-												>
-													<SelectTrigger>
-														<SelectValue placeholder="Select hour" />
-													</SelectTrigger>
-													<SelectContent>
-														{Array.from({ length: 24 }).map((_, i) => (
-															<SelectItem
-																key={i}
-																value={i.toString().padStart(2, "0")}
-															>
-																{i.toString().padStart(2, "0")}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="minute"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Minute</FormLabel>
-											<FormControl>
-												<Select
-													defaultValue={field.value}
-													onValueChange={field.onChange}
-												>
-													<SelectTrigger>
-														<SelectValue placeholder="Select minute" />
-													</SelectTrigger>
-													<SelectContent>
-														{Array.from({ length: 60 }).map((_, i) => (
-															<SelectItem
-																key={i}
-																value={i.toString().padStart(2, "0")}
-															>
-																{i.toString().padStart(2, "0")}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</div>
-						)}
-						{form.watch("scheduleType") === "weekly" && (
+				<form onSubmit={form.handleSubmit(onSubmit)} className="grid w-full gap-8">
+					<div className="flex flex-col gap-4">
+						<div className="flex flex-col gap-2">
+							<h3 className="text-sm font-medium">Destination Settings</h3>
 							<FormField
 								control={form.control}
-								name="selectedDays"
+								name="destinationId"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Days</FormLabel>
+										<FormLabel>Destination</FormLabel>
 										<FormControl>
 											<Select
-												defaultValue={field.value?.[0]}
-												onValueChange={(value) => field.onChange([value])}
+												defaultValue={field.value}
+												onValueChange={field.onChange}
 											>
 												<SelectTrigger>
-													<SelectValue placeholder="Select days" />
+													<SelectValue placeholder="Select destination" />
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value="0">Sunday</SelectItem>
-													<SelectItem value="1">Monday</SelectItem>
-													<SelectItem value="2">Tuesday</SelectItem>
-													<SelectItem value="3">Wednesday</SelectItem>
-													<SelectItem value="4">Thursday</SelectItem>
-													<SelectItem value="5">Friday</SelectItem>
-													<SelectItem value="6">Saturday</SelectItem>
+													<SelectItem value="hetzner">
+														Hetzner - Cascade
+													</SelectItem>
+													<SelectItem value="aws">AWS S3</SelectItem>
+													<SelectItem value="do">DigitalOcean Spaces</SelectItem>
 												</SelectContent>
 											</Select>
 										</FormControl>
@@ -297,51 +141,209 @@ export const ConfigurationDialog = ({
 									</FormItem>
 								)}
 							/>
-						)}
-						{form.watch("scheduleType") === "custom" && (
 							<FormField
 								control={form.control}
-								name="schedule"
+								name="prefix"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Cron Expression</FormLabel>
+										<FormLabel>Prefix</FormLabel>
 										<FormControl>
-											<Input
-												className="mt-1.5 font-mono"
-												placeholder="0 0 * * *"
-												{...field}
-											/>
+											<Input placeholder="backups/volumes/my-volume" {...field} />
 										</FormControl>
-										<FormDescription>
-											Use cron syntax (e.g., "0 0 * * *" for daily at midnight)
-										</FormDescription>
 										<FormMessage />
 									</FormItem>
 								)}
 							/>
-						)}
+							<FormField
+								control={form.control}
+								name="filenamePattern"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Filename Pattern</FormLabel>
+										<FormControl>
+											<Input
+												className="font-mono"
+												placeholder="{{name}}-{{YYYYMMDD}}-{{HHmmss}}.tgz"
+												{...field}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						</div>
+					</div>
 
-						<FormField
-							control={form.control}
-							name="enabled"
-							render={({ field }) => (
-								<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-									<div className="space-y-0.5">
-										<FormLabel>Schedule Active</FormLabel>
-										<FormDescription>
-											Turn scheduled backups on or off
-										</FormDescription>
-									</div>
-									<FormControl>
-										<Switch
-											checked={field.value}
-											onCheckedChange={field.onChange}
-										/>
-									</FormControl>
-								</FormItem>
+					<div className="flex flex-col gap-4">
+						<div className="flex flex-col gap-2">
+							<h3 className="text-sm font-medium">Schedule Settings</h3>
+							<FormField
+								control={form.control}
+								name="scheduleType"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Schedule Type</FormLabel>
+										<FormControl>
+											<Select
+												defaultValue={field.value}
+												onValueChange={field.onChange}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="Select frequency" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="hourly">Hourly</SelectItem>
+													<SelectItem value="daily">Daily</SelectItem>
+													<SelectItem value="weekly">Weekly</SelectItem>
+													<SelectItem value="monthly">Monthly</SelectItem>
+													<SelectItem value="custom">Custom (cron)</SelectItem>
+												</SelectContent>
+											</Select>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							{form.watch("scheduleType") !== "custom" && (
+								<div className="grid grid-cols-2 gap-2">
+									<FormField
+										control={form.control}
+										name="hour"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Hour</FormLabel>
+												<FormControl>
+													<Select
+														defaultValue={field.value}
+														onValueChange={field.onChange}
+													>
+														<SelectTrigger>
+															<SelectValue placeholder="Select hour" />
+														</SelectTrigger>
+														<SelectContent>
+															{Array.from({ length: 24 }).map((_, i) => (
+																<SelectItem
+																	key={i}
+																	value={i.toString().padStart(2, "0")}
+																>
+																	{i.toString().padStart(2, "0")}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+									<FormField
+										control={form.control}
+										name="minute"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Minute</FormLabel>
+												<FormControl>
+													<Select
+														defaultValue={field.value}
+														onValueChange={field.onChange}
+													>
+														<SelectTrigger>
+															<SelectValue placeholder="Select minute" />
+														</SelectTrigger>
+														<SelectContent>
+															{Array.from({ length: 60 }).map((_, i) => (
+																<SelectItem
+																	key={i}
+																	value={i.toString().padStart(2, "0")}
+																>
+																	{i.toString().padStart(2, "0")}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								</div>
 							)}
-						/>
-					</Card>
+							{form.watch("scheduleType") === "weekly" && (
+								<FormField
+									control={form.control}
+									name="selectedDays"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Days</FormLabel>
+											<FormControl>
+												<Select
+													defaultValue={field.value?.[0]}
+													onValueChange={(value) => field.onChange([value])}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="Select days" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="0">Sunday</SelectItem>
+														<SelectItem value="1">Monday</SelectItem>
+														<SelectItem value="2">Tuesday</SelectItem>
+														<SelectItem value="3">Wednesday</SelectItem>
+														<SelectItem value="4">Thursday</SelectItem>
+														<SelectItem value="5">Friday</SelectItem>
+														<SelectItem value="6">Saturday</SelectItem>
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							)}
+							{form.watch("scheduleType") === "custom" && (
+								<FormField
+									control={form.control}
+									name="schedule"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Cron Expression</FormLabel>
+											<FormControl>
+												<Input
+													className="font-mono"
+													placeholder="0 0 * * *"
+													{...field}
+												/>
+											</FormControl>
+											<FormDescription>
+												Use cron syntax (e.g., "0 0 * * *" for daily at midnight)
+											</FormDescription>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							)}
+						</div>
+					</div>
+
+					<FormField
+						control={form.control}
+						name="enabled"
+						render={({ field }) => (
+							<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+								<div className="space-y-0.5">
+									<FormLabel>Schedule Active</FormLabel>
+									<FormDescription>
+										Turn scheduled backups on or off
+									</FormDescription>
+								</div>
+								<FormControl>
+									<Switch
+										checked={field.value}
+										onCheckedChange={field.onChange}
+									/>
+								</FormControl>
+							</FormItem>
+						)}
+					/>
 
 					<DialogFooter>
 						<Button type="submit">
