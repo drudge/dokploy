@@ -286,6 +286,7 @@ export const ConfigurationDialog = ({
 												<Select
 													defaultValue={field.value}
 													onValueChange={field.onChange}
+													disabled={!form.watch("enabled")}
 												>
 													<SelectTrigger>
 														<SelectValue placeholder="Select schedule type" />
@@ -318,6 +319,7 @@ export const ConfigurationDialog = ({
 															<Select
 																defaultValue={field.value}
 																onValueChange={field.onChange}
+																disabled={!form.watch("enabled")}
 															>
 																<SelectTrigger>
 																	<SelectValue placeholder="Select day" />
@@ -352,6 +354,7 @@ export const ConfigurationDialog = ({
 															<Select
 																defaultValue={field.value}
 																onValueChange={field.onChange}
+																disabled={!form.watch("enabled")}
 															>
 																<SelectTrigger>
 																	<SelectValue placeholder="Hour" />
@@ -383,6 +386,7 @@ export const ConfigurationDialog = ({
 														<Select
 															defaultValue={field.value}
 															onValueChange={field.onChange}
+															disabled={!form.watch("enabled")}
 														>
 															<SelectTrigger>
 																<SelectValue placeholder="Minute" />
@@ -429,6 +433,7 @@ export const ConfigurationDialog = ({
 																variant="outline"
 																size="sm"
 																type="button"
+																disabled={!form.watch("enabled")}
 																className={`w-full ${
 																	field.value?.includes(day.value)
 																		? "bg-primary text-primary-foreground"
