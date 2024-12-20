@@ -76,7 +76,7 @@ export const ConfigurationDialog = ({
 		defaultValues: {
 			destinationId: "",
 			prefix: "/",
-			filenamePattern: `{{name}}-{{YYYYMMDD}}-{{HHmmss}}.tgz`,
+			filenamePattern: "{{name}}-{{YYYYMMDD}}-{{HHmmss}}.tgz",
 			scheduleType: "daily",
 			schedule: "0 0 * * *",
 			selectedDays: [],
@@ -208,7 +208,7 @@ export const ConfigurationDialog = ({
 															defaultValue={field.value}
 															onValueChange={field.onChange}
 														>
-															<SelectTrigger>
+															<SelectTrigger className="mt-1.5">
 																<SelectValue placeholder="Hour" />
 															</SelectTrigger>
 															<SelectContent>
@@ -232,7 +232,7 @@ export const ConfigurationDialog = ({
 															defaultValue={field.value}
 															onValueChange={field.onChange}
 														>
-															<SelectTrigger>
+															<SelectTrigger className="mt-1.5">
 																<SelectValue placeholder="Minute" />
 															</SelectTrigger>
 															<SelectContent>
