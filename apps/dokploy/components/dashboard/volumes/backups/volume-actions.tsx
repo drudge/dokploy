@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -43,11 +44,15 @@ const VolumeBackupConfigSchema = z.object({
 	destinationId: z.string().min(1, "Destination required"),
 	prefix: z.string().min(1, "Prefix required"),
 	filenamePattern: z.string().min(1, "Filename pattern required"),
-	scheduleType: z.enum(["hourly", "daily", "weekly", "monthly", "custom"]),
+	scheduleType: z.enum(["daily", "weekly", "monthly", "custom"]),
 	schedule: z.string().min(1, "Schedule required"),
 	selectedDays: z.array(z.string()).optional(),
-	hour: z.string().optional(),
-	minute: z.string().optional(),
+	hour: z.string()
+		.regex(/^([0-1]?[0-9]|2[0-3])$/, "Invalid hour format")
+		.optional(),
+	minute: z.string()
+		.regex(/^[0-5]?[0-9]$/, "Invalid minute format")
+		.optional(),
 	enabled: z.boolean(),
 });
 
@@ -85,7 +90,7 @@ export const ConfigurationDialog = ({
 		defaultValues: {
 			destinationId: "",
 			prefix: "/",
-			filenamePattern: "backup-%Y-%m-%d",
+			filenamePattern: "backup-{name}-{year}-{month}-{day}",
 			scheduleType: "daily",
 			schedule: "0 0 * * *",
 			selectedDays: [],
@@ -95,6 +100,22 @@ export const ConfigurationDialog = ({
 		},
 		resolver: zodResolver(VolumeBackupConfigSchema),
 	});
+
+	const scheduleType = form.watch("scheduleType");
+	const hour = form.watch("hour");
+	const minute = form.watch("minute");
+	const selectedDays = form.watch("selectedDays");
+
+	useEffect(() => {
+		if (scheduleType === "daily") {
+			form.setValue("schedule", `0 ${minute} ${hour} * * *`);
+		} else if (scheduleType === "weekly") {
+			const days = selectedDays?.join(",") || "*";
+			form.setValue("schedule", `0 ${minute} ${hour} * * ${days}`);
+		} else if (scheduleType === "monthly") {
+			form.setValue("schedule", `0 ${minute} ${hour} 1 * *`);
+		}
+	}, [scheduleType, hour, minute, selectedDays]);
 
 	const onSubmit = async (data: VolumeBackupConfig) => {
 		try {
@@ -194,22 +215,25 @@ export const ConfigurationDialog = ({
 															</p>
 															<ul className="text-sm text-muted-foreground space-y-1">
 																<li>
-																	<code>%Y</code> - Year (e.g., 2024)
+																	<code>{'{name}'}</code> - Volume name
 																</li>
 																<li>
-																	<code>%m</code> - Month (01-12)
+																	<code>{'{year}'}</code> - Year (e.g., 2024)
 																</li>
 																<li>
-																	<code>%d</code> - Day (01-31)
+																	<code>{'{month}'}</code> - Month (01-12)
 																</li>
 																<li>
-																	<code>%H</code> - Hour (00-23)
+																	<code>{'{day}'}</code> - Day (01-31)
 																</li>
 																<li>
-																	<code>%M</code> - Minute (00-59)
+																	<code>{'{hour}'}</code> - Hour (00-23)
 																</li>
 																<li>
-																	<code>%S</code> - Second (00-59)
+																	<code>{'{minute}'}</code> - Minute (00-59)
+																</li>
+																<li>
+																	<code>{'{second}'}</code> - Second (00-59)
 																</li>
 															</ul>
 														</div>
@@ -219,17 +243,15 @@ export const ConfigurationDialog = ({
 											<FormControl>
 												<Input
 													className="font-mono"
-													placeholder="backup-%Y-%m-%d"
+													placeholder="backup-{'{year}'}-{'{month}'}-{'{day}'}"
 													{...field}
 												/>
 											</FormControl>
 											<FormDescription>
 												<span className="italic">
-													Example: {volume.name}-{new Date().getFullYear()}
-													{new Date().getMonth()}
-													{new Date().getDate()}-{new Date().getHours()}
-													{new Date().getMinutes()}
-													{new Date().getSeconds()}.tgz
+													Example: {volume.name}-
+													{`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
+													.tgz
 												</span>
 											</FormDescription>
 											<FormMessage />
@@ -271,11 +293,142 @@ export const ConfigurationDialog = ({
 									)}
 								/>
 
-								{/* PLACEHOLDER: Hour and minute selection fields */}
+								{scheduleType !== 'custom' && (
+									<div className="grid grid-cols-2 gap-2">
+										<FormField
+											control={form.control}
+											name="hour"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Hour</FormLabel>
+													<FormControl>
+														<Select
+															defaultValue={field.value}
+															onValueChange={field.onChange}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="Hour" />
+															</SelectTrigger>
+															<SelectContent>
+																{Array.from({ length: 24 }, (_, i) => (
+																	<SelectItem
+																		key={i}
+																		value={i.toString().padStart(2, '0')}
+																	>
+																		{i.toString().padStart(2, '0')}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="minute"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Minute</FormLabel>
+													<FormControl>
+														<Select
+															defaultValue={field.value}
+															onValueChange={field.onChange}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="Minute" />
+															</SelectTrigger>
+															<SelectContent>
+																{Array.from({ length: 60 }, (_, i) => (
+																	<SelectItem
+																		key={i}
+																		value={i.toString().padStart(2, '0')}
+																	>
+																		{i.toString().padStart(2, '0')}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+									</div>
+								)}
 
-								{/* PLACEHOLDER: Weekly days selection */}
+								{scheduleType === 'weekly' && (
+									<FormField
+										control={form.control}
+										name="selectedDays"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Days</FormLabel>
+												<FormControl>
+													<div className="grid grid-cols-4 gap-2">
+														{[
+															{ value: "1", label: "Mon" },
+															{ value: "2", label: "Tue" },
+															{ value: "3", label: "Wed" },
+															{ value: "4", label: "Thu" },
+															{ value: "5", label: "Fri" },
+															{ value: "6", label: "Sat" },
+															{ value: "0", label: "Sun" }
+														].map((day) => (
+															<Button
+																key={day.value}
+																variant="outline"
+																size="sm"
+																type="button"
+																className={`${
+																	field.value?.includes(day.value)
+																		? "bg-primary text-primary-foreground"
+																		: ""
+																}`}
+																onClick={() => {
+																	const newValue = field.value || [];
+																	const index = newValue.indexOf(day.value);
+																	if (index === -1) {
+																		field.onChange([...newValue, day.value]);
+																	} else {
+																		field.onChange(newValue.filter((d) => d !== day.value));
+																	}
+																}}
+															>
+																{day.label}
+															</Button>
+														))}
+													</div>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								)}
 
-								{/* PLACEHOLDER: Custom cron expression field */}
+								{scheduleType === 'custom' && (
+									<FormField
+										control={form.control}
+										name="schedule"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Cron Expression</FormLabel>
+												<FormControl>
+													<Input
+														className="font-mono"
+														placeholder="0 0 * * *"
+														{...field}
+													/>
+												</FormControl>
+												<FormDescription>
+													Enter a custom cron expression for more specific scheduling needs
+												</FormDescription>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								)}
 							</div>
 						</div>
 
@@ -302,7 +455,7 @@ export const ConfigurationDialog = ({
 
 						<DialogFooter>
 							<Button type="submit">
-								{volume.lastBackup ? "Update" : "Save"} Configuration
+								{volume.lastBackup ? "Update" : "Save"}
 							</Button>
 						</DialogFooter>
 					</form>
