@@ -47,6 +47,10 @@ const VolumeBackupConfigSchema = z.object({
 	scheduleType: z.enum(["daily", "weekly", "monthly", "custom"]),
 	schedule: z.string().min(1, "Schedule required"),
 	selectedDays: z.array(z.string()).optional(),
+	monthDay: z
+		.string()
+		.regex(/^([1-9]|[12][0-9]|3[01])$/, "Invalid day of month")
+		.optional(),
 	hour: z
 		.string()
 		.regex(/^([0-1]?[0-9]|2[0-3])$/, "Invalid hour format")
@@ -107,6 +111,7 @@ export const ConfigurationDialog = ({
 	const hour = form.watch("hour");
 	const minute = form.watch("minute");
 	const selectedDays = form.watch("selectedDays");
+	const monthDay = form.watch("monthDay");
 
 	useEffect(() => {
 		if (scheduleType === "daily") {
@@ -115,9 +120,10 @@ export const ConfigurationDialog = ({
 			const days = selectedDays?.join(",") || "*";
 			form.setValue("schedule", `0 ${minute} ${hour} * * ${days}`);
 		} else if (scheduleType === "monthly") {
-			form.setValue("schedule", `0 ${minute} ${hour} 1 * *`);
+			const day = monthDay || "1";
+			form.setValue("schedule", `0 ${minute} ${hour} ${day} * *`);
 		}
-	}, [scheduleType, hour, minute, selectedDays]);
+	}, [scheduleType, hour, minute, selectedDays, monthDay, form]);
 
 	const onSubmit = async (data: VolumeBackupConfig) => {
 		try {
@@ -297,6 +303,38 @@ export const ConfigurationDialog = ({
 
 								{scheduleType !== "custom" && (
 									<div className="grid grid-cols-2 gap-2">
+										{scheduleType === "monthly" && (
+											<FormField
+												control={form.control}
+												name="monthDay"
+												render={({ field }) => (
+													<FormItem>
+														<FormLabel>Day of Month</FormLabel>
+														<FormControl>
+															<Select
+																defaultValue={field.value}
+																onValueChange={field.onChange}
+															>
+																<SelectTrigger>
+																	<SelectValue placeholder="Select day" />
+																</SelectTrigger>
+																<SelectContent>
+																	{Array.from({ length: 31 }, (_, i) => (
+																		<SelectItem
+																			key={i + 1}
+																			value={(i + 1).toString().padStart(2, "0")}
+																		>
+																			{(i + 1).toString().padStart(2, "0")}
+																		</SelectItem>
+																	))}
+																</SelectContent>
+															</Select>
+														</FormControl>
+														<FormMessage />
+													</FormItem>
+												)}
+											/>
+										)}
 										<FormField
 											control={form.control}
 											name="hour"
@@ -368,7 +406,7 @@ export const ConfigurationDialog = ({
 											<FormItem>
 												<FormLabel>Days</FormLabel>
 												<FormControl>
-													<div className="grid grid-cols-4 gap-2">
+													<div className="flex gap-1.5">
 														{[
 															{ value: "1", label: "Mon" },
 															{ value: "2", label: "Tue" },
@@ -383,7 +421,7 @@ export const ConfigurationDialog = ({
 																variant="outline"
 																size="sm"
 																type="button"
-																className={`${
+																className={`min-w-[3rem] ${
 																	field.value?.includes(day.value)
 																		? "bg-primary text-primary-foreground"
 																		: ""
