@@ -148,7 +148,7 @@ export const ConfigurationDialog = ({
 					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 						<div className="flex flex-col gap-4">
 							<div className="flex flex-col gap-2">
-								<h3 className="text-sm font-medium">Destination Settings</h3>
+								<div className="text-sm font-medium">Destination Settings</div>
 								<FormField
 									control={form.control}
 									name="destinationId"
@@ -226,22 +226,22 @@ export const ConfigurationDialog = ({
 																	<code>{"{name}"}</code> - Volume name
 																</li>
 																<li>
-																	<code>{"{year}"}</code> - Year (e.g., 2024)
+																	<code>{"{YYYY}"}</code> - Year (e.g., 2024)
 																</li>
 																<li>
-																	<code>{"{month}"}</code> - Month (01-12)
+																	<code>{"{MM}"}</code> - Month (01-12)
 																</li>
 																<li>
-																	<code>{"{day}"}</code> - Day (01-31)
+																	<code>{"{dd}"}</code> - Day (01-31)
 																</li>
 																<li>
-																	<code>{"{hour}"}</code> - Hour (00-23)
+																	<code>{"{HH}"}</code> - Hour (00-23)
 																</li>
 																<li>
-																	<code>{"{minute}"}</code> - Minute (00-59)
+																	<code>{"{mm}"}</code> - Minute (00-59)
 																</li>
 																<li>
-																	<code>{"{second}"}</code> - Second (00-59)
+																	<code>{"{ss}"}</code> - Second (00-59)
 																</li>
 															</ul>
 														</div>
@@ -251,14 +251,13 @@ export const ConfigurationDialog = ({
 											<FormControl>
 												<Input
 													className="font-mono"
-													placeholder="backup-{'{year}'}-{'{month}'}-{'{day}'}"
+													placeholder="{name}-{YYYY}-{MM}-{dd}"
 													{...field}
 												/>
 											</FormControl>
 											<FormDescription>
 												<span className="italic">
-													Example: {volume.name}-
-													{`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`}
+													Example: {volume.name}-{"{YYYY}"}-{"{MM}"}-{"{dd}"}
 													.tgz
 												</span>
 											</FormDescription>
@@ -271,7 +270,7 @@ export const ConfigurationDialog = ({
 
 						<div className="flex flex-col gap-4">
 							<div className="flex flex-col gap-2">
-								<h3 className="text-sm font-medium">Schedule Settings</h3>
+								<div className="text-sm font-medium">Schedule Settings</div>
 								<FormField
 									control={form.control}
 									name="scheduleType"
@@ -322,7 +321,9 @@ export const ConfigurationDialog = ({
 																	{Array.from({ length: 31 }, (_, i) => (
 																		<SelectItem
 																			key={i + 1}
-																			value={(i + 1).toString().padStart(2, "0")}
+																			value={(i + 1)
+																				.toString()
+																				.padStart(2, "0")}
 																		>
 																			{(i + 1).toString().padStart(2, "0")}
 																		</SelectItem>
@@ -406,7 +407,7 @@ export const ConfigurationDialog = ({
 											<FormItem>
 												<FormLabel>Days</FormLabel>
 												<FormControl>
-													<div className="flex gap-1.5">
+													<div className="grid grid-cols-7 gap-1.5 w-full">
 														{[
 															{ value: "1", label: "Mon" },
 															{ value: "2", label: "Tue" },
@@ -421,7 +422,7 @@ export const ConfigurationDialog = ({
 																variant="outline"
 																size="sm"
 																type="button"
-																className={`min-w-[3rem] ${
+																className={`w-full ${
 																	field.value?.includes(day.value)
 																		? "bg-primary text-primary-foreground"
 																		: ""
