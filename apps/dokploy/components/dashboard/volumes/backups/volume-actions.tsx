@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -14,6 +15,7 @@ import {
 	FormField,
 	FormItem,
 	FormLabel,
+	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -58,6 +60,7 @@ interface ConfigurationDialogProps {
 	volume: Volume;
 	isOpen: boolean;
 	setIsOpen: (open: boolean) => void;
+	onConfigure?: (volume: Volume) => void;
 }
 
 interface Props {
@@ -71,6 +74,7 @@ export const ConfigurationDialog = ({
 	volume,
 	isOpen,
 	setIsOpen,
+	onConfigure,
 }: ConfigurationDialogProps) => {
 	const form = useForm<VolumeBackupConfig>({
 		defaultValues: {
@@ -98,243 +102,252 @@ export const ConfigurationDialog = ({
 	};
 
 	return (
-		<DialogContent className="sm:max-w-md">
+		<DialogContent className="max-h-screen overflow-y-auto sm:max-w-2xl">
 			<DialogHeader>
 				<DialogTitle>Configure Volume Backup</DialogTitle>
+				<DialogDescription>
+					Configure automated backups for this volume
+				</DialogDescription>
 			</DialogHeader>
 			<Form {...form}>
-				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-					<div className="space-y-6">
-						<div>
-							<h3 className="text-sm font-medium mb-2">Destination Settings</h3>
-							<Card>
-								<div className="p-4 space-y-4">
-									<FormField
-										control={form.control}
-										name="destinationId"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Destination</FormLabel>
-												<Select
-													defaultValue={field.value}
-													onValueChange={field.onChange}
-												>
-													<SelectTrigger className="mt-1.5">
-														<SelectValue placeholder="Select destination" />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="hetzner">
-															Hetzner - Cascade
-														</SelectItem>
-														<SelectItem value="aws">AWS S3</SelectItem>
-														<SelectItem value="do">
-															DigitalOcean Spaces
-														</SelectItem>
-													</SelectContent>
-												</Select>
-											</FormItem>
-										)}
-									/>
-									<FormField
-										control={form.control}
-										name="prefix"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Prefix Destination</FormLabel>
-												<Input
-													className="mt-1.5"
-													placeholder="backups/volumes/my-volume"
-													{...field}
-												/>
-											</FormItem>
-										)}
-									/>
-									<FormField
-										control={form.control}
-										name="filenamePattern"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Filename Pattern</FormLabel>
-												<Input
-													className="mt-1.5 font-mono"
-													placeholder="{{name}}-{{YYYYMMDD}}-{{HHmmss}}.tgz"
-													{...field}
-												/>
-											</FormItem>
-										)}
-									/>
-								</div>
-							</Card>
-						</div>
-						<div>
-							<h3 className="text-sm font-medium mb-2">Schedule Settings</h3>
-							<Card>
-								<div className="p-4 space-y-4">
-									<FormField
-										control={form.control}
-										name="scheduleType"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Backup Schedule</FormLabel>
-												<Select
-													defaultValue={field.value}
-													onValueChange={field.onChange}
-												>
-													<SelectTrigger className="mt-1.5">
-														<SelectValue placeholder="Select frequency" />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="hourly">Hourly</SelectItem>
-														<SelectItem value="daily">Daily</SelectItem>
-														<SelectItem value="weekly">Weekly</SelectItem>
-														<SelectItem value="monthly">Monthly</SelectItem>
-														<SelectItem value="custom">
-															Custom (cron)
-														</SelectItem>
-													</SelectContent>
-												</Select>
-											</FormItem>
-										)}
-									/>
-									{form.watch("scheduleType") !== "custom" && (
-										<div>
-											<FormLabel>Time</FormLabel>
-											<div className="grid grid-cols-2 gap-2 mt-1.5">
-												<FormField
-													control={form.control}
-													name="hour"
-													render={({ field }) => (
-														<Select
-															defaultValue={field.value}
-															onValueChange={field.onChange}
-														>
-															<SelectTrigger className="mt-1.5">
-																<SelectValue placeholder="Hour" />
-															</SelectTrigger>
-															<SelectContent>
-																{Array.from({ length: 24 }, (_, i) => (
-																	<SelectItem
-																		key={i}
-																		value={i.toString().padStart(2, "0")}
-																	>
-																		{i.toString().padStart(2, "0")}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-													)}
-												/>
-												<FormField
-													control={form.control}
-													name="minute"
-													render={({ field }) => (
-														<Select
-															defaultValue={field.value}
-															onValueChange={field.onChange}
-														>
-															<SelectTrigger className="mt-1.5">
-																<SelectValue placeholder="Minute" />
-															</SelectTrigger>
-															<SelectContent>
-																{Array.from({ length: 60 }, (_, i) => (
-																	<SelectItem
-																		key={i}
-																		value={i.toString().padStart(2, "0")}
-																	>
-																		{i.toString().padStart(2, "0")}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-													)}
-												/>
-											</div>
-										</div>
-									)}
-									{form.watch("scheduleType") === "weekly" && (
-										<div>
-											<FormLabel>Days</FormLabel>
-											<div className="grid grid-cols-4 gap-2 mt-1.5">
-												{[
-													{ value: "1", label: "Mon" },
-													{ value: "2", label: "Tue" },
-													{ value: "3", label: "Wed" },
-													{ value: "4", label: "Thu" },
-													{ value: "5", label: "Fri" },
-													{ value: "6", label: "Sat" },
-													{ value: "0", label: "Sun" },
-												].map((day) => (
-													<Button
-														key={day.value}
-														variant="outline"
-														size="sm"
-														className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-														data-state={
-															form.watch("selectedDays")?.includes(day.value)
-																? "on"
-																: "off"
-														}
-														onClick={() => {
-															const currentDays =
-																form.watch("selectedDays") || [];
-															const newSelectedDays = new Set(currentDays);
-															if (newSelectedDays.has(day.value)) {
-																newSelectedDays.delete(day.value);
-															} else {
-																newSelectedDays.add(day.value);
-															}
-															form.setValue(
-																"selectedDays",
-																Array.from(newSelectedDays),
-															);
-														}}
-													>
-														{day.label}
-													</Button>
-												))}
-											</div>
-										</div>
-									)}
-									{form.watch("scheduleType") === "custom" && (
-										<FormField
-											control={form.control}
-											name="schedule"
-											render={({ field }) => (
-												<FormItem>
-													<FormLabel>Cron Expression</FormLabel>
-													<Input
-														className="mt-1.5 font-mono"
-														placeholder="0 0 * * *"
-														{...field}
-													/>
-												</FormItem>
-											)}
+				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+					<Card className="p-4 space-y-4">
+						<h3 className="text-sm font-medium">Destination Settings</h3>
+						<FormField
+							control={form.control}
+							name="destinationId"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Destination</FormLabel>
+									<FormControl>
+										<Select
+											defaultValue={field.value}
+											onValueChange={field.onChange}
+										>
+											<SelectTrigger className="mt-1.5">
+												<SelectValue placeholder="Select destination" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="hetzner">Hetzner - Cascade</SelectItem>
+												<SelectItem value="aws">AWS S3</SelectItem>
+												<SelectItem value="do">DigitalOcean Spaces</SelectItem>
+											</SelectContent>
+										</Select>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="prefix"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Prefix</FormLabel>
+									<FormControl>
+										<Input
+											className="mt-1.5"
+											placeholder="backups/volumes/my-volume"
+											{...field}
 										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="filenamePattern"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Filename Pattern</FormLabel>
+									<FormControl>
+										<Input
+											className="mt-1.5 font-mono"
+											placeholder="{{name}}-{{YYYYMMDD}}-{{HHmmss}}.tgz"
+											{...field}
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+					</Card>
+
+					<Card className="p-4 space-y-4">
+						<h3 className="text-sm font-medium">Schedule Settings</h3>
+						<FormField
+							control={form.control}
+							name="scheduleType"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Schedule Type</FormLabel>
+									<FormControl>
+										<Select
+											defaultValue={field.value}
+											onValueChange={field.onChange}
+										>
+											<SelectTrigger className="mt-1.5">
+												<SelectValue placeholder="Select frequency" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="hourly">Hourly</SelectItem>
+												<SelectItem value="daily">Daily</SelectItem>
+												<SelectItem value="weekly">Weekly</SelectItem>
+												<SelectItem value="monthly">Monthly</SelectItem>
+												<SelectItem value="custom">Custom (cron)</SelectItem>
+											</SelectContent>
+										</Select>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						{/* Time selection for non-custom schedules */}
+						{form.watch("scheduleType") !== "custom" && (
+							<div className="grid grid-cols-2 gap-2">
+								<FormField
+									control={form.control}
+									name="hour"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Hour</FormLabel>
+											<FormControl>
+												<Select
+													defaultValue={field.value}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger className="mt-1.5">
+														<SelectValue placeholder="Select hour" />
+													</SelectTrigger>
+													<SelectContent>
+														{Array.from({ length: 24 }).map((_, i) => (
+															<SelectItem
+																key={i}
+																value={i.toString().padStart(2, "0")}
+															>
+																{i.toString().padStart(2, "0")}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
 									)}
-									<FormField
-										control={form.control}
-										name="enabled"
-										render={({ field }) => (
-											<FormItem className="flex items-center justify-between pt-2">
-												<div>
-													<FormLabel>Schedule Active</FormLabel>
-													<p className="text-sm text-muted-foreground">
-														Turn scheduled backups on or off
-													</p>
-												</div>
-												<Switch
-													checked={field.value}
-													onCheckedChange={field.onChange}
-												/>
-											</FormItem>
-										)}
-									/>
-								</div>
-							</Card>
-						</div>
-					</div>
+								/>
+								<FormField
+									control={form.control}
+									name="minute"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Minute</FormLabel>
+											<FormControl>
+												<Select
+													defaultValue={field.value}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger className="mt-1.5">
+														<SelectValue placeholder="Select minute" />
+													</SelectTrigger>
+													<SelectContent>
+														{Array.from({ length: 60 }).map((_, i) => (
+															<SelectItem
+																key={i}
+																value={i.toString().padStart(2, "0")}
+															>
+																{i.toString().padStart(2, "0")}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							</div>
+						)}
+						{form.watch("scheduleType") === "weekly" && (
+							<FormField
+								control={form.control}
+								name="selectedDays"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Days</FormLabel>
+										<FormControl>
+											<Select
+												defaultValue={field.value?.[0]}
+												onValueChange={(value) => field.onChange([value])}
+											>
+												<SelectTrigger className="mt-1.5">
+													<SelectValue placeholder="Select days" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="0">Sunday</SelectItem>
+													<SelectItem value="1">Monday</SelectItem>
+													<SelectItem value="2">Tuesday</SelectItem>
+													<SelectItem value="3">Wednesday</SelectItem>
+													<SelectItem value="4">Thursday</SelectItem>
+													<SelectItem value="5">Friday</SelectItem>
+													<SelectItem value="6">Saturday</SelectItem>
+												</SelectContent>
+											</Select>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						)}
+						{form.watch("scheduleType") === "custom" && (
+							<FormField
+								control={form.control}
+								name="schedule"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Cron Expression</FormLabel>
+										<FormControl>
+											<Input
+												className="mt-1.5 font-mono"
+												placeholder="0 0 * * *"
+												{...field}
+											/>
+										</FormControl>
+										<FormDescription>
+											Use cron syntax (e.g., "0 0 * * *" for daily at midnight)
+										</FormDescription>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						)}
+
+						<FormField
+							control={form.control}
+							name="enabled"
+							render={({ field }) => (
+								<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+									<div className="space-y-0.5">
+										<FormLabel>Schedule Active</FormLabel>
+										<FormDescription>
+											Turn scheduled backups on or off
+										</FormDescription>
+									</div>
+									<FormControl>
+										<Switch
+											checked={field.value}
+											onCheckedChange={field.onChange}
+										/>
+									</FormControl>
+								</FormItem>
+							)}
+						/>
+					</Card>
+
 					<DialogFooter>
-						<Button type="submit">Save Configuration</Button>
+						<Button type="submit">
+							{volume.lastBackup ? "Update" : "Save"} Configuration
+						</Button>
 					</DialogFooter>
 				</form>
 			</Form>
@@ -348,73 +361,25 @@ export const VolumeActions = ({
 	onRestore,
 	onConfigure,
 }: Props) => {
-	const [modalOpen, setModalOpen] = useState(false);
-	const [configureOpen, setConfigureOpen] = useState(false);
-	const [operation, setOperation] = useState<"backup" | "restore">("backup");
-	const [containers, setContainers] = useState<
-		Array<{ id: string; name: string; status: string }>
-	>([]);
-
-	const handleBackup = async () => {
-		// Will fetch containers using this volume later
-		setContainers([{ id: "1", name: "postgresql", status: "running" }]);
-		setOperation("backup");
-		setModalOpen(true);
-	};
-
-	const handleRestore = async () => {
-		// Will fetch containers using this volume later
-		setContainers([{ id: "1", name: "postgresql", status: "running" }]);
-		setOperation("restore");
-		setModalOpen(true);
-	};
-
-	const handleConfirm = async () => {
-		try {
-			if (operation === "backup" && onBackup) {
-				await onBackup(volume);
-				toast.success("Volume backup started");
-			} else if (operation === "restore" && onRestore) {
-				await onRestore(volume);
-				toast.success("Volume restore started");
-			}
-			setModalOpen(false);
-		} catch (error) {
-			toast.error(`Failed to ${operation} volume: ${error}`);
-		}
-	};
+	const [isOpen, setIsOpen] = useState(false);
 
 	return (
 		<>
-			<div className="flex flex-row gap-4">
-				<Button onClick={handleBackup}>Backup</Button>
-				<Button variant="outline" onClick={handleRestore}>
-					Restore
-				</Button>
-				<Button
-					variant="ghost"
-					size="icon"
-					onClick={() => setConfigureOpen(true)}
-				>
-					<Settings2 className="h-4 w-4" />
-				</Button>
-			</div>
-			<ContainerModal
-				isOpen={modalOpen}
-				setIsOpen={setModalOpen}
-				containers={containers}
-				onConfirm={handleConfirm}
-				operation={operation}
-				volumeName={volume.name}
-				volumeSize={volume.size}
-			/>
-			<Dialog open={configureOpen} onOpenChange={setConfigureOpen}>
+			<Dialog open={isOpen} onOpenChange={setIsOpen}>
 				<ConfigurationDialog
 					volume={volume}
-					isOpen={configureOpen}
-					setIsOpen={setConfigureOpen}
+					isOpen={isOpen}
+					setIsOpen={setIsOpen}
+					onConfigure={onConfigure}
 				/>
 			</Dialog>
+			<div className="flex items-center gap-2">
+				<Button variant="outline" size="sm" onClick={() => setIsOpen(true)}>
+					<Settings2 className="h-4 w-4" />
+					Configure
+				</Button>
+				{/* PLACEHOLDER: backup and restore buttons */}
+			</div>
 		</>
 	);
 };
