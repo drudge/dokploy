@@ -116,7 +116,6 @@ export const ConfigurationDialog = ({
 				>
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-2">
-							<h3 className="text-sm font-medium">Destination Settings</h3>
 							<FormField
 								control={form.control}
 								name="destinationId"
@@ -151,13 +150,17 @@ export const ConfigurationDialog = ({
 								name="prefix"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Prefix</FormLabel>
+										<FormLabel>Prefix Destination</FormLabel>
 										<FormControl>
 											<Input
 												placeholder="backups/volumes/my-volume"
 												{...field}
 											/>
 										</FormControl>
+										<FormDescription>
+											Use if you want to storage in a specific path of your
+											destination/bucket
+										</FormDescription>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -175,6 +178,15 @@ export const ConfigurationDialog = ({
 												{...field}
 											/>
 										</FormControl>
+										<FormDescription>
+											<span className="italic">
+												{volume.name}-{new Date().getFullYear()}
+												{new Date().getMonth()}
+												{new Date().getDate()}-{new Date().getHours()}
+												{new Date().getMinutes()}
+												{new Date().getSeconds()}.tgz
+											</span>
+										</FormDescription>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -184,13 +196,12 @@ export const ConfigurationDialog = ({
 
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-2">
-							<h3 className="text-sm font-medium">Schedule Settings</h3>
 							<FormField
 								control={form.control}
 								name="scheduleType"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Schedule Type</FormLabel>
+										<FormLabel>Frequency</FormLabel>
 										<FormControl>
 											<Select
 												defaultValue={field.value}
@@ -371,7 +382,7 @@ export const ConfigurationDialog = ({
 
 					<DialogFooter>
 						<Button type="submit">
-							{volume.lastBackup ? "Update" : "Save"} Configuration
+							{volume.lastBackup ? "Update" : "Save"}
 						</Button>
 					</DialogFooter>
 				</form>
