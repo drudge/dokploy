@@ -19,6 +19,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import {
 	Select,
 	SelectContent,
 	SelectItem,
@@ -27,17 +32,12 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Settings2, HelpCircle } from "lucide-react";
+import { HelpCircle, Settings2 } from "lucide-react";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ContainerModal } from "./container-modal";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 
 const VolumeBackupConfigSchema = z.object({
 	destinationId: z.string().min(1, "Destination required"),
@@ -116,10 +116,7 @@ export const ConfigurationDialog = ({
 					</DialogDescription>
 				</DialogHeader>
 				<Form {...form}>
-					<form
-						onSubmit={form.handleSubmit(onSubmit)}
-						className="grid w-full gap-8"
-					>
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 						<div className="flex flex-col gap-4">
 							<div className="flex flex-col gap-2">
 								<h3 className="text-sm font-medium">Destination Settings</h3>
@@ -164,6 +161,10 @@ export const ConfigurationDialog = ({
 													{...field}
 												/>
 											</FormControl>
+											<FormDescription>
+												Use if you want to store in a specific path of your
+												destination/bucket
+											</FormDescription>
 											<FormMessage />
 										</FormItem>
 									)}
@@ -173,45 +174,51 @@ export const ConfigurationDialog = ({
 									name="filenamePattern"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Filename Pattern</FormLabel>
+											<FormLabel className="flex items-center gap-2">
+												Filename Pattern
+												<Popover>
+													<PopoverTrigger asChild>
+														<Button
+															variant="ghost"
+															size="icon"
+															className="h-4 w-4 p-0"
+														>
+															<HelpCircle className="h-4 w-4" />
+														</Button>
+													</PopoverTrigger>
+													<PopoverContent className="w-80">
+														<div className="space-y-2">
+															<h4 className="font-medium">Format Variables</h4>
+															<p className="text-sm text-muted-foreground">
+																Available variables for filename pattern:
+															</p>
+															<ul className="text-sm text-muted-foreground space-y-1">
+																<li><code>%Y</code> - Year (e.g., 2024)</li>
+																<li><code>%m</code> - Month (01-12)</li>
+																<li><code>%d</code> - Day (01-31)</li>
+																<li><code>%H</code> - Hour (00-23)</li>
+																<li><code>%M</code> - Minute (00-59)</li>
+																<li><code>%S</code> - Second (00-59)</li>
+															</ul>
+														</div>
+													</PopoverContent>
+												</Popover>
+											</FormLabel>
 											<FormControl>
-												<div className="flex items-center gap-2">
-													<Input
-														className="font-mono"
-														placeholder="backup-%Y-%m-%d"
-														{...field}
-													/>
-													<Popover>
-														<PopoverTrigger asChild>
-															<Button
-																variant="ghost"
-																size="icon"
-																className="h-8 w-8"
-															>
-																<HelpCircle className="h-4 w-4" />
-															</Button>
-														</PopoverTrigger>
-														<PopoverContent className="w-80">
-															<div className="space-y-2">
-																<h4 className="font-medium">Format Variables</h4>
-																<p className="text-sm text-muted-foreground">
-																	Available variables for filename pattern:
-																</p>
-																<ul className="text-sm text-muted-foreground space-y-1">
-																	<li><code>%Y</code> - Year (e.g., 2024)</li>
-																	<li><code>%m</code> - Month (01-12)</li>
-																	<li><code>%d</code> - Day (01-31)</li>
-																	<li><code>%H</code> - Hour (00-23)</li>
-																	<li><code>%M</code> - Minute (00-59)</li>
-																	<li><code>%S</code> - Second (00-59)</li>
-																</ul>
-															</div>
-														</PopoverContent>
-													</Popover>
-												</div>
+												<Input
+													className="font-mono"
+													placeholder="backup-%Y-%m-%d"
+													{...field}
+												/>
 											</FormControl>
 											<FormDescription>
-												Pattern for generated backup filenames
+												<span className="italic">
+													Example: {volume.name}-{new Date().getFullYear()}
+													{new Date().getMonth()}
+													{new Date().getDate()}-{new Date().getHours()}
+													{new Date().getMinutes()}
+													{new Date().getSeconds()}.tgz
+												</span>
 											</FormDescription>
 											<FormMessage />
 										</FormItem>
@@ -228,17 +235,16 @@ export const ConfigurationDialog = ({
 									name="scheduleType"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Schedule Type</FormLabel>
+											<FormLabel>Frequency</FormLabel>
 											<FormControl>
 												<Select
 													defaultValue={field.value}
 													onValueChange={field.onChange}
 												>
 													<SelectTrigger>
-														<SelectValue placeholder="Select frequency" />
+														<SelectValue placeholder="Select schedule type" />
 													</SelectTrigger>
 													<SelectContent>
-														<SelectItem value="hourly">Hourly</SelectItem>
 														<SelectItem value="daily">Daily</SelectItem>
 														<SelectItem value="weekly">Weekly</SelectItem>
 														<SelectItem value="monthly">Monthly</SelectItem>
@@ -250,139 +256,12 @@ export const ConfigurationDialog = ({
 										</FormItem>
 									)}
 								/>
-								{form.watch("scheduleType") !== "custom" && (
-									<div className="grid grid-cols-2 gap-2">
-										<FormField
-											control={form.control}
-											name="hour"
-											render={({ field }) => (
-												<FormItem>
-													<FormLabel>Hour</FormLabel>
-													<FormControl>
-														<Select
-															defaultValue={field.value}
-															onValueChange={field.onChange}
-														>
-															<SelectTrigger>
-																<SelectValue placeholder="Select hour" />
-															</SelectTrigger>
-															<SelectContent>
-																{Array.from({ length: 24 }).map((_, i) => (
-																	<SelectItem
-																		key={i}
-																		value={i.toString().padStart(2, "0")}
-																	>
-																		{i.toString().padStart(2, "0")}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-													</FormControl>
-													<FormMessage />
-												</FormItem>
-											)}
-										/>
-										<FormField
-											control={form.control}
-											name="minute"
-											render={({ field }) => (
-												<FormItem>
-													<FormLabel>Minute</FormLabel>
-													<FormControl>
-														<Select
-															defaultValue={field.value}
-															onValueChange={field.onChange}
-														>
-															<SelectTrigger>
-																<SelectValue placeholder="Select minute" />
-															</SelectTrigger>
-															<SelectContent>
-																{Array.from({ length: 60 }).map((_, i) => (
-																	<SelectItem
-																		key={i}
-																		value={i.toString().padStart(2, "0")}
-																	>
-																		{i.toString().padStart(2, "0")}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-													</FormControl>
-													<FormMessage />
-												</FormItem>
-											)}
-										/>
-									</div>
-								)}
-								{form.watch("scheduleType") === "weekly" && (
-									<FormField
-										control={form.control}
-										name="selectedDays"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Days</FormLabel>
-												<FormControl>
-													<div className="flex flex-wrap gap-2">
-														{[
-															{ value: "0", label: "Sun" },
-															{ value: "1", label: "Mon" },
-															{ value: "2", label: "Tue" },
-															{ value: "3", label: "Wed" },
-															{ value: "4", label: "Thu" },
-															{ value: "5", label: "Fri" },
-															{ value: "6", label: "Sat" },
-														].map(({ value, label }) => (
-															<Button
-																key={value}
-																type="button"
-																size="sm"
-																variant={
-																	field.value?.includes(value)
-																		? "default"
-																		: "outline"
-																}
-																className="min-w-[3rem]"
-																onClick={() => {
-																	const current = field.value || [];
-																	const updated = current.includes(value)
-																		? current.filter((v) => v !== value)
-																		: [...current, value];
-																	field.onChange(updated);
-																}}
-															>
-																{label}
-															</Button>
-														))}
-													</div>
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
-								)}
-								{form.watch("scheduleType") === "custom" && (
-									<FormField
-										control={form.control}
-										name="schedule"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Cron Expression</FormLabel>
-												<FormControl>
-													<Input
-														className="font-mono"
-														placeholder="0 0 * * *"
-														{...field}
-													/>
-												</FormControl>
-												<FormDescription>
-													Use cron syntax (e.g., "0 0 * * *" for daily at
-													midnight)
-												</FormDescription>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
-								)}
+
+								{/* PLACEHOLDER: Hour and minute selection fields */}
+
+								{/* PLACEHOLDER: Weekly days selection */}
+
+								{/* PLACEHOLDER: Custom cron expression field */}
 							</div>
 						</div>
 
