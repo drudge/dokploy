@@ -193,12 +193,24 @@ export const ConfigurationDialog = ({
 																Available variables for filename pattern:
 															</p>
 															<ul className="text-sm text-muted-foreground space-y-1">
-																<li><code>%Y</code> - Year (e.g., 2024)</li>
-																<li><code>%m</code> - Month (01-12)</li>
-																<li><code>%d</code> - Day (01-31)</li>
-																<li><code>%H</code> - Hour (00-23)</li>
-																<li><code>%M</code> - Minute (00-59)</li>
-																<li><code>%S</code> - Second (00-59)</li>
+																<li>
+																	<code>%Y</code> - Year (e.g., 2024)
+																</li>
+																<li>
+																	<code>%m</code> - Month (01-12)
+																</li>
+																<li>
+																	<code>%d</code> - Day (01-31)
+																</li>
+																<li>
+																	<code>%H</code> - Hour (00-23)
+																</li>
+																<li>
+																	<code>%M</code> - Minute (00-59)
+																</li>
+																<li>
+																	<code>%S</code> - Second (00-59)
+																</li>
 															</ul>
 														</div>
 													</PopoverContent>
@@ -248,7 +260,9 @@ export const ConfigurationDialog = ({
 														<SelectItem value="daily">Daily</SelectItem>
 														<SelectItem value="weekly">Weekly</SelectItem>
 														<SelectItem value="monthly">Monthly</SelectItem>
-														<SelectItem value="custom">Custom (cron)</SelectItem>
+														<SelectItem value="custom">
+															Custom (cron)
+														</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
