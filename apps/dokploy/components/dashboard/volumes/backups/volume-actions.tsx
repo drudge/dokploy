@@ -44,7 +44,7 @@ const VolumeBackupConfigSchema = z.object({
 	destinationId: z.string().min(1, "Destination required"),
 	prefix: z.string().min(1, "Prefix required"),
 	filenamePattern: z.string().min(1, "Filename pattern required"),
-	scheduleType: z.enum(["daily", "weekly", "monthly", "custom"]),
+	scheduleType: z.enum(["hourly", "daily", "weekly", "monthly", "custom"]),
 	schedule: z.string().min(1, "Schedule required"),
 	selectedDays: z.array(z.string()).optional(),
 	monthDay: z
@@ -114,7 +114,9 @@ export const ConfigurationDialog = ({
 	const monthDay = form.watch("monthDay");
 
 	useEffect(() => {
-		if (scheduleType === "daily") {
+		if (scheduleType === "hourly") {
+			form.setValue("schedule", `0 ${minute} * * * *`);
+		} else if (scheduleType === "daily") {
 			form.setValue("schedule", `0 ${minute} ${hour} * * *`);
 		} else if (scheduleType === "weekly") {
 			const days = selectedDays?.join(",") || "*";
@@ -243,6 +245,9 @@ export const ConfigurationDialog = ({
 																<li>
 																	<code>{"{ss}"}</code> - Second (00-59)
 																</li>
+																<li>
+																	<code>{"{SSS}"}</code> - Millisecond (000-999)
+																</li>
 															</ul>
 														</div>
 													</PopoverContent>
@@ -251,13 +256,13 @@ export const ConfigurationDialog = ({
 											<FormControl>
 												<Input
 													className="font-mono"
-													placeholder="{name}-{YYYY}-{MM}-{dd}"
+													placeholder="{name}-{YYYY}-{MM}-{dd}-{HH}{mm}{ss}{SSS}"
 													{...field}
 												/>
 											</FormControl>
 											<FormDescription>
 												<span className="italic">
-													Example: {volume.name}-{"{YYYY}"}-{"{MM}"}-{"{dd}"}
+													Example: {volume.name}-{"{YYYY}"}-{"{MM}"}-{"{dd}"}-{"{HH}"}{"{mm}"}{"{ss}"}{"{SSS}"}
 													.tgz
 												</span>
 											</FormDescription>
@@ -301,7 +306,7 @@ export const ConfigurationDialog = ({
 								/>
 
 								{scheduleType !== "custom" && (
-									<div className="grid grid-cols-2 gap-2">
+									<div className={`grid gap-2 ${scheduleType === "hourly" ? "grid-cols-1" : "grid-cols-2"}`}>
 										{scheduleType === "monthly" && (
 											<FormField
 												control={form.control}
@@ -336,41 +341,43 @@ export const ConfigurationDialog = ({
 												)}
 											/>
 										)}
-										<FormField
-											control={form.control}
-											name="hour"
-											render={({ field }) => (
-												<FormItem>
-													<FormLabel>Hour</FormLabel>
-													<FormControl>
-														<Select
-															defaultValue={field.value}
-															onValueChange={field.onChange}
-														>
-															<SelectTrigger>
-																<SelectValue placeholder="Hour" />
-															</SelectTrigger>
-															<SelectContent>
-																{Array.from({ length: 24 }, (_, i) => (
-																	<SelectItem
-																		key={i}
-																		value={i.toString().padStart(2, "0")}
-																	>
-																		{i.toString().padStart(2, "0")}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-													</FormControl>
-													<FormMessage />
-												</FormItem>
-											)}
-										/>
+										{scheduleType !== "hourly" && (
+											<FormField
+												control={form.control}
+												name="hour"
+												render={({ field }) => (
+													<FormItem>
+														<FormLabel>Hour</FormLabel>
+														<FormControl>
+															<Select
+																defaultValue={field.value}
+																onValueChange={field.onChange}
+															>
+																<SelectTrigger>
+																	<SelectValue placeholder="Hour" />
+																</SelectTrigger>
+																<SelectContent>
+																	{Array.from({ length: 24 }, (_, i) => (
+																		<SelectItem
+																			key={i}
+																			value={i.toString().padStart(2, "0")}
+																		>
+																			{i.toString().padStart(2, "0")}
+																		</SelectItem>
+																	))}
+																</SelectContent>
+															</Select>
+														</FormControl>
+														<FormMessage />
+													</FormItem>
+												)}
+											/>
+										)}
 										<FormField
 											control={form.control}
 											name="minute"
 											render={({ field }) => (
-												<FormItem>
+												<FormItem className={scheduleType === "hourly" ? "col-span-2" : ""}>
 													<FormLabel>Minute</FormLabel>
 													<FormControl>
 														<Select
