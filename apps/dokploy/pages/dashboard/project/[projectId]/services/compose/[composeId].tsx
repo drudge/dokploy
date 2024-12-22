@@ -5,9 +5,9 @@ import { ShowDeploymentsCompose } from "@/components/dashboard/compose/deploymen
 import { ShowDomainsCompose } from "@/components/dashboard/compose/domains/show-domains";
 import { ShowEnvironmentCompose } from "@/components/dashboard/compose/enviroment/show";
 import { ShowGeneralCompose } from "@/components/dashboard/compose/general/show";
-import { ShowOverviewCompose } from "@/components/dashboard/compose/overview/show-overview-compose";
 import { ShowDockerLogsCompose } from "@/components/dashboard/compose/logs/show";
 import { ShowMonitoringCompose } from "@/components/dashboard/compose/monitoring/show";
+import { ShowOverviewCompose } from "@/components/dashboard/compose/overview/show-overview-compose";
 import { UpdateCompose } from "@/components/dashboard/compose/update-compose";
 import { ProjectLayout } from "@/components/layouts/project-layout";
 import { StatusTooltip } from "@/components/shared/status-tooltip";
