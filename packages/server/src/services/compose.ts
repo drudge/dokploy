@@ -210,7 +210,7 @@ export const deployCompose = async ({
 		title: titleLog,
 		description: descriptionLog,
 	});
-	const buildLink = `${await getDokployUrl()}/dashboard/project/${compose.projectId}/services/compose/${compose.composeId}/deployments/${deployment.deploymentId}`;
+	const buildLink = `${await getDokployUrl()}/dashboard/project/${compose.projectId}/services/compose/${compose.composeId}?tab=deployments&deploymentId=${deployment.deploymentId}`;
 
 	try {
 		if (compose.sourceType === "github") {
@@ -312,7 +312,7 @@ export const deployRemoteCompose = async ({
 		title: titleLog,
 		description: descriptionLog,
 	});
-	const buildLink = `${await getDokployUrl()}/dashboard/project/${compose.projectId}/services/compose/${compose.composeId}/deployments/${deployment.deploymentId}`;
+	const buildLink = `${await getDokployUrl()}/dashboard/project/${compose.projectId}/services/compose/${compose.composeId}?tab=deployments&deploymentId=${deployment.deploymentId}`;
 	try {
 		if (compose.serverId) {
 			let command = "set -e;";
