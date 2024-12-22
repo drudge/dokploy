@@ -36,18 +36,16 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 		if (!term) {
 			const segments = parseAnsi(text);
 			return segments.map((segment, index) => {
-				const style = segment.style && {
-					color: segment.style.color,
-					backgroundColor: segment.style.backgroundColor,
-				};
+				// Ensure style object is properly constructed with CSS variables
+				const style = segment.style ? {
+					color: segment.style.color || 'inherit',
+					backgroundColor: segment.style.backgroundColor || 'transparent',
+				} : undefined;
 
-				// Escape HTML entities in the text content
+				// Only escape < and > to preserve HTML while making text safe
 				const escapedText = segment.text
-					.replace(/&/g, "&amp;")
 					.replace(/</g, "&lt;")
-					.replace(/>/g, "&gt;")
-					.replace(/"/g, "&quot;")
-					.replace(/'/g, "&#039;");
+					.replace(/>/g, "&gt;");
 
 				return (
 					<span
@@ -70,16 +68,16 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 				<span
 					key={index}
 					className={cn(segment.className, "transition-colors")}
-					style={segment.style || undefined}
+					style={segment.style ? {
+						color: segment.style.color || 'inherit',
+						backgroundColor: segment.style.backgroundColor || 'transparent',
+					} : undefined}
 				>
 					{parts.map((part, partIndex) => {
-						// Escape HTML entities in each part
+						// Only escape < and > for search terms to preserve other entities
 						const escapedPart = part
-							.replace(/&/g, "&amp;")
 							.replace(/</g, "&lt;")
-							.replace(/>/g, "&gt;")
-							.replace(/"/g, "&quot;")
-							.replace(/'/g, "&#039;");
+							.replace(/>/g, "&gt;");
 
 						return part.toLowerCase() === term.toLowerCase() ? (
 							<span

@@ -207,15 +207,20 @@ interface AnsiSegment {
 
 export function parseAnsi(text: string): AnsiSegment[] {
 	const segments: AnsiSegment[] = [];
-	const html = fancyAnsi.toHtml(text);
+	// First, convert any HTML entities in the raw text to prevent double-escaping
+	const decodedText = text
+		.replace(/&quot;/g, '"')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&amp;/g, '&');
+
+	// Now parse the ANSI codes
+	const html = fancyAnsi.toHtml(decodedText);
 
 	// Split HTML into segments while preserving ANSI styling
 	const parts = html.split(/(<[^>]+>|<\/[^>]+>)/);
 	let currentStyle: { color?: string; backgroundColor?: string } | undefined;
 	let currentClass = "";
-
-	// We no longer need to decode HTML entities since they are now properly escaped at the server level
-	// This ensures that fancy-ansi's HTML output remains intact while user input is safely escaped
 	for (const part of parts) {
 		if (part.startsWith("<span")) {
 			// Extract style and class from span tag
