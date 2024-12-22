@@ -196,8 +196,17 @@ export const getLogType = (message: string): LogStyle => {
 
 const fancyAnsi = new FancyAnsi();
 
-export function parseAnsi(text: string) {
-	const segments: { text: string; className: string; style?: { color?: string; backgroundColor?: string } }[] = [];
+interface AnsiSegment {
+	text: string;
+	className: string;
+	style?: {
+		color?: string;
+		backgroundColor?: string;
+	};
+}
+
+export function parseAnsi(text: string): AnsiSegment[] {
+	const segments: AnsiSegment[] = [];
 	const html = fancyAnsi.toHtml(text);
 
 	// Split HTML into segments while preserving ANSI styling
@@ -205,17 +214,8 @@ export function parseAnsi(text: string) {
 	let currentStyle: { color?: string; backgroundColor?: string } | undefined;
 	let currentClass = "";
 
-	const decodeHtmlEntities = (str: string) => {
-		const entities = {
-			'&quot;': '"',
-			'&amp;': '&',
-			'&lt;': '<',
-			'&gt;': '>',
-			'&apos;': "'",
-		};
-		return str.replace(/&quot;|&amp;|&lt;|&gt;|&apos;/g, match => entities[match]);
-	};
-
+	// We no longer need to decode HTML entities since they are now properly escaped at the server level
+	// This ensures that fancy-ansi's HTML output remains intact while user input is safely escaped
 	for (const part of parts) {
 		if (part.startsWith("<span")) {
 			// Extract style and class from span tag
@@ -228,32 +228,35 @@ export function parseAnsi(text: string) {
 				const rgbMatch = styleMatch[1].match(/color: rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
 				const bgRgbMatch = styleMatch[1].match(/background-color: rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
 
-				if (rgbMatch) {
-					const [, r, g, b] = rgbMatch;
-					// Map RGB values to CSS variables
-					if (r === '204' && g === '0' && b === '0') {
-						currentStyle.color = 'var(--ansi-red)';
-					} else if (r === '78' && g === '154' && b === '6') {
-						currentStyle.color = 'var(--ansi-green)';
-					} else if (r === '196' && g === '160' && b === '0') {
-						currentStyle.color = 'var(--ansi-yellow)';
-					} else if (r === '52' && g === '101' && b === '164') {
-						currentStyle.color = 'var(--ansi-blue)';
-					}
+				const rgbToAnsiVar = (r: string, g: string, b: string): string => {
+					const rgbMap: Record<string, string> = {
+						'0,0,0': '--ansi-black',
+						'204,0,0': '--ansi-red',
+						'78,154,6': '--ansi-green',
+						'196,160,0': '--ansi-yellow',
+						'52,101,164': '--ansi-blue',
+						'117,80,123': '--ansi-magenta',
+						'6,152,154': '--ansi-cyan',
+						'211,215,207': '--ansi-white',
+						'85,87,83': '--ansi-bright-black',
+						'239,41,41': '--ansi-bright-red',
+						'138,226,52': '--ansi-bright-green',
+						'252,233,79': '--ansi-bright-yellow',
+						'114,159,207': '--ansi-bright-blue',
+						'173,127,168': '--ansi-bright-magenta',
+						'52,226,226': '--ansi-bright-cyan',
+						'238,238,236': '--ansi-bright-white'
+					};
+					const key = `${r},${g},${b}`;
+					return `var(${rgbMap[key] || '--ansi-white'})`;
+				};
+
+				if (rgbMatch?.[1] && rgbMatch?.[2] && rgbMatch?.[3]) {
+					currentStyle.color = rgbToAnsiVar(rgbMatch[1], rgbMatch[2], rgbMatch[3]);
 				}
 
-				if (bgRgbMatch) {
-					const [, r, g, b] = bgRgbMatch;
-					// Map background RGB values to CSS variables
-					if (r === '204' && g === '0' && b === '0') {
-						currentStyle.backgroundColor = 'var(--ansi-red)';
-					} else if (r === '78' && g === '154' && b === '6') {
-						currentStyle.backgroundColor = 'var(--ansi-green)';
-					} else if (r === '196' && g === '160' && b === '0') {
-						currentStyle.backgroundColor = 'var(--ansi-yellow)';
-					} else if (r === '52' && g === '101' && b === '164') {
-						currentStyle.backgroundColor = 'var(--ansi-blue)';
-					}
+				if (bgRgbMatch?.[1] && bgRgbMatch?.[2] && bgRgbMatch?.[3]) {
+					currentStyle.backgroundColor = rgbToAnsiVar(bgRgbMatch[1], bgRgbMatch[2], bgRgbMatch[3]);
 				}
 			}
 			
@@ -263,7 +266,7 @@ export function parseAnsi(text: string) {
 			currentClass = "";
 		} else if (part.trim()) {
 			segments.push({
-				text: decodeHtmlEntities(part),
+				text: part,
 				className: currentClass,
 				...(currentStyle && Object.keys(currentStyle).length > 0 && { style: currentStyle }),
 			});

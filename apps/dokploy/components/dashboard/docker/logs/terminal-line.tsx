@@ -35,15 +35,21 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 	const highlightMessage = (text: string, term: string) => {
 		if (!term) {
 			const segments = parseAnsi(text);
-			return segments.map((segment, index) => (
-				<span
-					key={index}
-					className={segment.className || undefined}
-					style={segment.style || undefined}
-				>
-					{segment.text}
-				</span>
-			));
+			return segments.map((segment, index) => {
+				const style = segment.style && {
+					color: segment.style.color,
+					backgroundColor: segment.style.backgroundColor
+				};
+				return (
+					<span
+						key={index}
+						className={segment.className || undefined}
+						style={style}
+					>
+						{segment.text}
+					</span>
+				);
+			});
 		}
 
 		// For search, we need to handle both ANSI and search highlighting

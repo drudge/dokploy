@@ -5,6 +5,16 @@ import { Client } from "ssh2";
 import { WebSocketServer } from "ws";
 import { getShell } from "./utils";
 
+function escapeHtmlForLog(raw: string | null | undefined): string {
+	if (raw == null) return '';
+	return raw
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
+
 export const setupDockerContainerLogsWebSocketServer = (
 	server: http.Server<typeof http.IncomingMessage, typeof http.ServerResponse>,
 ) => {
@@ -73,10 +83,10 @@ export const setupDockerContainerLogsWebSocketServer = (
 									ws.close();
 								})
 								.on("data", (data: string) => {
-									ws.send(data.toString());
+									ws.send(escapeHtmlForLog(data.toString()));
 								})
 								.stderr.on("data", (data) => {
-									ws.send(data.toString());
+									ws.send(escapeHtmlForLog(data.toString()));
 								});
 						});
 					})
@@ -113,7 +123,7 @@ export const setupDockerContainerLogsWebSocketServer = (
 				});
 
 				ptyProcess.onData((data) => {
-					ws.send(data);
+					ws.send(escapeHtmlForLog(data.toString()));
 				});
 				ws.on("close", () => {
 					ptyProcess.kill();
@@ -130,7 +140,7 @@ export const setupDockerContainerLogsWebSocketServer = (
 					} catch (error) {
 						// @ts-ignore
 						const errorMessage = error?.message as unknown as string;
-						ws.send(errorMessage);
+						ws.send(escapeHtmlForLog(errorMessage));
 					}
 				});
 			}
@@ -138,7 +148,7 @@ export const setupDockerContainerLogsWebSocketServer = (
 			// @ts-ignore
 			const errorMessage = error?.message as unknown as string;
 
-			ws.send(errorMessage);
+			ws.send(escapeHtmlForLog(errorMessage));
 		}
 	});
 };
