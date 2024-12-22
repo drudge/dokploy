@@ -1,6 +1,6 @@
+import { formatDistanceToNow } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { formatDistanceToNow } from "date-fns";
 import { StatusTooltip } from "../../../../components/shared/status-tooltip";
 import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
@@ -21,7 +21,14 @@ import {
 } from "../../../../components/ui/table";
 import { api } from "../../../../utils/api";
 
-type DockerContainerState = "running" | "exited" | "created" | "restarting" | "removing" | "paused" | "dead";
+type DockerContainerState =
+	| "running"
+	| "exited"
+	| "created"
+	| "restarting"
+	| "removing"
+	| "paused"
+	| "dead";
 
 interface ContainerHealth {
 	Status: string;
@@ -99,8 +106,8 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			},
 		);
 
-	const serverId = compose?.serverId || undefined;
-	const shouldFetchDockerData = !!serverId;
+	const serverId = compose?.serverId;  // can be string or null
+	const shouldFetchDockerData = serverId !== null;
 
 	const {
 		data: containerDetails = [],
@@ -110,7 +117,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		{
 			appName: compose?.appName || "",
 			appType: compose?.composeType || "docker-compose",
-			serverId: compose?.serverId || undefined,
+			serverId: compose?.serverId ?? null,
 		},
 		{
 			enabled: !!compose?.appName && shouldFetchDockerData,
@@ -127,7 +134,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		api.docker.getConfig.useQuery(
 			{
 				containerId: container.containerId,
-				serverId: compose?.serverId || undefined,
+				serverId: compose?.serverId ?? null,
 			},
 			{
 				enabled: !!container.containerId && shouldFetchDockerData,
@@ -213,16 +220,22 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 							{!shouldFetchDockerData ? (
 								<TableRow>
 									<TableCell colSpan={5} className="h-24 text-center">
-										No server configured. Docker container information is not available.
+										No server configured. Docker container information is not
+										available.
 									</TableCell>
 								</TableRow>
 							) : containerError ? (
 								<TableRow>
-									<TableCell colSpan={5} className="h-24 text-center text-destructive">
+									<TableCell
+										colSpan={5}
+										className="h-24 text-center text-destructive"
+									>
 										Failed to fetch container details. Please try again.
 									</TableCell>
 								</TableRow>
-							) : isLoadingCompose || isLoadingServices || isLoadingContainers ? (
+							) : isLoadingCompose ||
+								isLoadingServices ||
+								isLoadingContainers ? (
 								<TableRow>
 									<TableCell colSpan={5} className="h-24 text-center">
 										<div className="flex items-center justify-center">
@@ -257,8 +270,8 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 													container.health?.Status === "healthy"
 														? "running"
 														: container.health?.Status === "unhealthy"
-														? "error"
-														: "idle"
+															? "error"
+															: "idle"
 												}
 											/>
 										</TableCell>
@@ -266,7 +279,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 											{container.startedAt
 												? formatDistanceToNow(new Date(container.startedAt), {
 														addSuffix: true,
-												  })
+													})
 												: "-"}
 										</TableCell>
 										<TableCell className="text-right">
@@ -286,7 +299,10 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 													variant="outline"
 													size="sm"
 													onClick={() => {
-														const query = { ...router.query, tab: "monitoring" };
+														const query = {
+															...router.query,
+															tab: "monitoring",
+														};
 														router.push({ query });
 													}}
 												>
@@ -321,7 +337,10 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 													variant="outline"
 													size="sm"
 													onClick={() => {
-														const query = { ...router.query, tab: "monitoring" };
+														const query = {
+															...router.query,
+															tab: "monitoring",
+														};
 														router.push({ query });
 													}}
 												>

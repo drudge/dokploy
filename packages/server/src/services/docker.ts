@@ -100,7 +100,7 @@ export const getConfig = async (
 export const getContainersByAppNameMatch = async (
 	appName: string,
 	appType?: "stack" | "docker-compose",
-	serverId?: string,
+	serverId?: string | null,
 ) => {
 	try {
 		let result: string[] = [];
@@ -159,7 +159,7 @@ export const getContainersByAppNameMatch = async (
 
 export const getContainersByAppLabel = async (
 	appName: string,
-	serverId?: string,
+	serverId?: string | null,
 ) => {
 	try {
 		let stdout = "";
