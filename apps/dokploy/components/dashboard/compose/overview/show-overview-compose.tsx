@@ -274,37 +274,54 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 	// Handle container selection and router query sync
 	useEffect(() => {
 		if (!containers?.length) {
-			console.debug('No containers available yet');
+			console.debug("No containers available yet");
 			return;
 		}
 
 		// Try to find container by ID from router query
 		const container = containers.find(
-			(c) => c.containerId === router.query.containerId
+			(c) => c.containerId === router.query.containerId,
 		);
 
 		if (container) {
-			console.debug('Found container from query:', container.name);
+			console.debug("Found container from query:", container.name);
 			setContainerAppName(container.name);
 			setContainerId(container.containerId);
 		} else if (!containerId || !containerAppName) {
 			// No container selected or not found in current list, fallback to first
-			console.debug('Falling back to first container:', containers[0]?.name);
-			setContainerAppName(containers[0].name);
-			setContainerId(containers[0].containerId);
-			
-			// Update router query to match selected container
-			const query = {
-				...router.query,
-				containerId: containers[0].containerId,
-			};
-			router.push({ query }, undefined, { shallow: true });
+			if (containers[0]) {
+				console.debug("Falling back to first container:", containers[0].name);
+				setContainerAppName(containers[0].name);
+				setContainerId(containers[0].containerId);
+
+				// Update router query to match selected container
+				const query = {
+					...router.query,
+					containerId: containers[0].containerId,
+				};
+				router.push({ query }, undefined, { shallow: true });
+			}
 		}
 	}, [containers, router.query.containerId, containerId, containerAppName]);
 
+	// Map container state and health to status
 	const mapContainerStateToStatus = (
 		state: DockerContainerState | string,
+		health?: ContainerHealth,
 	): "idle" | "error" | "done" | "running" => {
+		// Prioritize health status if available
+		if (health?.Status) {
+			switch (health.Status.toLowerCase()) {
+				case "healthy":
+					return "running";
+				case "unhealthy":
+					return "error";
+				case "starting":
+					return "idle";
+			}
+		}
+
+		// Fallback to container state
 		switch (state.toLowerCase()) {
 			case "running":
 				return "running";
@@ -428,30 +445,35 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 											</TableCell>
 											<TableCell>
 												<StatusTooltip
-													status={mapContainerStateToStatus(container.state)}
+													status={mapContainerStateToStatus(
+														container.state,
+														container.health
+													)}
 												/>
 											</TableCell>
 											<TableCell>
-												{container.health?.Status ? (
-													<StatusTooltip
-														status={
-															container.health.Status === "healthy"
-																? "running"
-																: container.health.Status === "unhealthy"
-																	? "error"
-																	: "idle"
-														}
-													/>
-												) : (
-													<StatusTooltip status="idle" />
-												)}
+												<Badge
+													variant={
+														container.health?.Status?.toLowerCase() === "healthy"
+															? "default"
+															: container.health?.Status?.toLowerCase() === "unhealthy"
+															? "destructive"
+															: "secondary"
+													}
+													className={
+														container.health?.Status?.toLowerCase() === "healthy"
+															? "bg-green-500 hover:bg-green-500/90"
+															: undefined
+													}
+												>
+													{container.health?.Status || "No health check"}
+												</Badge>
 											</TableCell>
 											<TableCell>
-												{container?.startedAt &&
-												container.state.toLowerCase() === "running"
+												{container?.startedAt
 													? formatDistanceToNow(new Date(container.startedAt), {
 															addSuffix: true,
-														})
+													  })
 													: "-"}
 											</TableCell>
 											<TableCell className="text-right">
@@ -460,12 +482,18 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 														variant="outline"
 														size="sm"
 														onClick={() => {
-															const query = {
-																...router.query,
-																tab: "logs",
-																containerId: container.containerId,
-															};
-															router.push({ query });
+															// Find matching container and update query
+															const matchingContainer = containers.find(
+																(c) => c.containerId === container.containerId
+															);
+															if (matchingContainer) {
+																const query = {
+																	...router.query,
+																	tab: "logs",
+																	containerId: matchingContainer.containerId,
+																};
+																router.push({ query }, undefined, { shallow: true });
+															}
 														}}
 													>
 														<FileText className="h-4 w-4 mr-2" />
@@ -475,12 +503,18 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 														variant="outline"
 														size="sm"
 														onClick={() => {
-															const query = {
-																...router.query,
-																tab: "monitoring",
-																containerId: container.containerId,
-															};
-															router.push({ query });
+															// Find matching container and update query
+															const matchingContainer = containers.find(
+																(c) => c.containerId === container.containerId
+															);
+															if (matchingContainer) {
+																const query = {
+																	...router.query,
+																	tab: "monitoring",
+																	containerId: matchingContainer.containerId,
+																};
+																router.push({ query }, undefined, { shallow: true });
+															}
 														}}
 													>
 														<ExternalLink className="h-4 w-4 mr-2" />
