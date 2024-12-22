@@ -2,6 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Add transition for color changes */
+.transition-colors {
+	transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+}
+
+:root {
+	/* Standard ANSI Colors */
+	--ansi-black: #000000;
+	--ansi-red: #cc0000;
+	--ansi-green: #4e9a06;
+	--ansi-yellow: #c4a000;
+	--ansi-blue: #3465a4;
+	--ansi-magenta: #75507b;
+	--ansi-cyan: #06989a;
+	--ansi-white: #d3d7cf;
+
+	/* Bright ANSI Colors */
+	--ansi-bright-black: #555753;
+	--ansi-bright-red: #ef2929;
+	--ansi-bright-green: #8ae234;
+	--ansi-bright-yellow: #fce94f;
+	--ansi-bright-blue: #729fcf;
+	--ansi-bright-magenta: #ad7fa8;
+	--ansi-bright-cyan: #34e2e2;
+	--ansi-bright-white: #eeeeec;
+}
+
+/* Dark mode overrides */
+:root.dark {
+	/* Standard ANSI Colors */
+	--ansi-black: #000000;
+	--ansi-red: #ff5555;
+	--ansi-green: #50fa7b;
+	--ansi-yellow: #f1fa8c;
+	--ansi-blue: #bd93f9;
+	--ansi-magenta: #ff79c6;
+	--ansi-cyan: #8be9fd;
+	--ansi-white: #f8f8f2;
+
+	/* Bright ANSI Colors */
+	--ansi-bright-black: #6272a4;
+	--ansi-bright-red: #ff6e6e;
+	--ansi-bright-green: #69ff94;
+	--ansi-bright-yellow: #ffffa5;
+	--ansi-bright-blue: #d6acff;
+	--ansi-bright-magenta: #ff92df;
+	--ansi-bright-cyan: #a4ffff;
+	--ansi-bright-white: #ffffff;
+}
+
 @layer base {
 	:root {
 		--background: 0 0% 100%;

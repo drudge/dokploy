@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { useEffect, useRef, useState } from "react";
 import { TerminalLine } from "../../docker/logs/terminal-line";
-import { LogLine, parseLogs } from "../../docker/logs/utils";
+import { type LogLine, parseLogs } from "../../docker/logs/utils";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 

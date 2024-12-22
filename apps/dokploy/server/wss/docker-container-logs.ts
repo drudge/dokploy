@@ -113,7 +113,7 @@ export const setupDockerContainerLogsWebSocketServer = (
 				});
 
 				ptyProcess.onData((data) => {
-					ws.send(data);
+					ws.send(data.toString());
 				});
 				ws.on("close", () => {
 					ptyProcess.kill();

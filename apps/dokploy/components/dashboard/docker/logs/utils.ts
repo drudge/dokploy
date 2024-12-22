@@ -1,3 +1,5 @@
+import { FancyAnsi } from "fancy-ansi";
+
 export type LogType = "error" | "warning" | "success" | "info" | "debug";
 export type LogVariant = "red" | "yellow" | "green" | "blue" | "orange";
 
@@ -192,54 +194,101 @@ export const getLogType = (message: string): LogStyle => {
 	return LOG_STYLES.info;
 };
 
-export function parseAnsi(text: string) {
-	const segments: { text: string; className: string }[] = [];
-	let currentIndex = 0;
-	let currentClasses: string[] = [];
+const fancyAnsi = new FancyAnsi();
 
-	while (currentIndex < text.length) {
-		const escStart = text.indexOf("\x1b[", currentIndex);
+interface AnsiSegment {
+	text: string;
+	className: string;
+	style?: {
+		color?: string;
+		backgroundColor?: string;
+	};
+}
 
-		// No more escape sequences found
-		if (escStart === -1) {
-			if (currentIndex < text.length) {
-				segments.push({
-					text: text.slice(currentIndex),
-					className: currentClasses.join(" "),
-				});
-			}
-			break;
-		}
+export function parseAnsi(text: string): AnsiSegment[] {
+	const segments: AnsiSegment[] = [];
+	// First, convert any HTML entities in the raw text to prevent double-escaping
+	const decodedText = text
+		.replace(/&quot;/g, '"')
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&amp;/g, "&");
 
-		// Add text before escape sequence
-		if (escStart > currentIndex) {
-			segments.push({
-				text: text.slice(currentIndex, escStart),
-				className: currentClasses.join(" "),
-			});
-		}
+	// Now parse the ANSI codes
+	const html = fancyAnsi.toHtml(decodedText);
 
-		const escEnd = text.indexOf("m", escStart);
-		if (escEnd === -1) break;
+	// Split HTML into segments while preserving ANSI styling
+	const parts = html.split(/(<[^>]+>|<\/[^>]+>)/);
+	let currentStyle: { color?: string; backgroundColor?: string } | undefined;
+	let currentClass = "";
+	for (const part of parts) {
+		if (part.startsWith("<span")) {
+			// Extract style and class from span tag
+			const styleMatch = part.match(/style="([^"]+)"/);
+			const classMatch = part.match(/class="([^"]+)"/);
 
-		// Handle multiple codes in one sequence (e.g., \x1b[1;31m)
-		const codesStr = text.slice(escStart + 2, escEnd);
-		const codes = codesStr.split(";").map((c) => Number.parseInt(c, 10));
+			currentStyle = {};
+			if (styleMatch?.[1]) {
+				// Extract RGB colors and map to CSS variables
+				const rgbMatch = styleMatch[1].match(
+					/color: rgb\((\d+),\s*(\d+),\s*(\d+)\)/,
+				);
+				const bgRgbMatch = styleMatch[1].match(
+					/background-color: rgb\((\d+),\s*(\d+),\s*(\d+)\)/,
+				);
 
-		if (codes.includes(0)) {
-			// Reset all formatting
-			currentClasses = [];
-		} else {
-			// Add new classes for each code
-			for (const code of codes) {
-				const className = ansiToTailwind[code];
-				if (className && !currentClasses.includes(className)) {
-					currentClasses.push(className);
+				const rgbToAnsiVar = (r: string, g: string, b: string): string => {
+					const rgbMap: Record<string, string> = {
+						"0,0,0": "--ansi-black",
+						"204,0,0": "--ansi-red",
+						"78,154,6": "--ansi-green",
+						"196,160,0": "--ansi-yellow",
+						"52,101,164": "--ansi-blue",
+						"117,80,123": "--ansi-magenta",
+						"6,152,154": "--ansi-cyan",
+						"211,215,207": "--ansi-white",
+						"85,87,83": "--ansi-bright-black",
+						"239,41,41": "--ansi-bright-red",
+						"138,226,52": "--ansi-bright-green",
+						"252,233,79": "--ansi-bright-yellow",
+						"114,159,207": "--ansi-bright-blue",
+						"173,127,168": "--ansi-bright-magenta",
+						"52,226,226": "--ansi-bright-cyan",
+						"238,238,236": "--ansi-bright-white",
+					};
+					const key = `${r},${g},${b}`;
+					return `var(${rgbMap[key] || "--ansi-white"})`;
+				};
+
+				if (rgbMatch?.[1] && rgbMatch?.[2] && rgbMatch?.[3]) {
+					currentStyle.color = rgbToAnsiVar(
+						rgbMatch[1],
+						rgbMatch[2],
+						rgbMatch[3],
+					);
+				}
+
+				if (bgRgbMatch?.[1] && bgRgbMatch?.[2] && bgRgbMatch?.[3]) {
+					currentStyle.backgroundColor = rgbToAnsiVar(
+						bgRgbMatch[1],
+						bgRgbMatch[2],
+						bgRgbMatch[3],
+					);
 				}
 			}
-		}
 
-		currentIndex = escEnd + 1;
+			currentClass = classMatch?.[1] ?? "";
+		} else if (part.startsWith("</span>")) {
+			currentStyle = undefined;
+			currentClass = "";
+		} else if (part.trim()) {
+			segments.push({
+				text: part,
+				className: currentClass,
+				...(currentStyle &&
+					Object.keys(currentStyle).length > 0 && { style: currentStyle }),
+			});
+		}
 	}
 
 	return segments;
