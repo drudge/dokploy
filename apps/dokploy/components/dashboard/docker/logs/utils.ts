@@ -205,6 +205,17 @@ export function parseAnsi(text: string) {
 	let currentStyle: { color?: string; backgroundColor?: string } | undefined;
 	let currentClass = "";
 
+	const decodeHtmlEntities = (str: string) => {
+		const entities = {
+			'&quot;': '"',
+			'&amp;': '&',
+			'&lt;': '<',
+			'&gt;': '>',
+			'&apos;': "'",
+		};
+		return str.replace(/&quot;|&amp;|&lt;|&gt;|&apos;/g, match => entities[match]);
+	};
+
 	for (const part of parts) {
 		if (part.startsWith("<span")) {
 			// Extract style and class from span tag
@@ -213,11 +224,37 @@ export function parseAnsi(text: string) {
 			
 			currentStyle = {};
 			if (styleMatch?.[1]) {
-				const colorMatch = styleMatch[1].match(/color:\s*(var\([^)]+\))/);
-				const bgColorMatch = styleMatch[1].match(/background-color:\s*(var\([^)]+\))/);
-				
-				if (colorMatch) currentStyle.color = colorMatch[1];
-				if (bgColorMatch) currentStyle.backgroundColor = bgColorMatch[1];
+				// Extract RGB colors and map to CSS variables
+				const rgbMatch = styleMatch[1].match(/color: rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+				const bgRgbMatch = styleMatch[1].match(/background-color: rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+
+				if (rgbMatch) {
+					const [, r, g, b] = rgbMatch;
+					// Map RGB values to CSS variables
+					if (r === '204' && g === '0' && b === '0') {
+						currentStyle.color = 'var(--ansi-red)';
+					} else if (r === '78' && g === '154' && b === '6') {
+						currentStyle.color = 'var(--ansi-green)';
+					} else if (r === '196' && g === '160' && b === '0') {
+						currentStyle.color = 'var(--ansi-yellow)';
+					} else if (r === '52' && g === '101' && b === '164') {
+						currentStyle.color = 'var(--ansi-blue)';
+					}
+				}
+
+				if (bgRgbMatch) {
+					const [, r, g, b] = bgRgbMatch;
+					// Map background RGB values to CSS variables
+					if (r === '204' && g === '0' && b === '0') {
+						currentStyle.backgroundColor = 'var(--ansi-red)';
+					} else if (r === '78' && g === '154' && b === '6') {
+						currentStyle.backgroundColor = 'var(--ansi-green)';
+					} else if (r === '196' && g === '160' && b === '0') {
+						currentStyle.backgroundColor = 'var(--ansi-yellow)';
+					} else if (r === '52' && g === '101' && b === '164') {
+						currentStyle.backgroundColor = 'var(--ansi-blue)';
+					}
+				}
 			}
 			
 			currentClass = classMatch?.[1] ?? "";
@@ -226,7 +263,7 @@ export function parseAnsi(text: string) {
 			currentClass = "";
 		} else if (part.trim()) {
 			segments.push({
-				text: part,
+				text: decodeHtmlEntities(part),
 				className: currentClass,
 				...(currentStyle && Object.keys(currentStyle).length > 0 && { style: currentStyle }),
 			});

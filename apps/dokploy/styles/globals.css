@@ -8,22 +8,22 @@
 		--foreground: 240 10% 3.9%;
 
 		/* ANSI Colors - Light Mode */
-		--ansi-black: 0 0% 0%;
-		--ansi-red: #cc0000;
-		--ansi-green: #4e9a06;
-		--ansi-yellow: #c4a000;
-		--ansi-blue: #3465a4;
-		--ansi-magenta: #75507b;
-		--ansi-cyan: #06989a;
-		--ansi-white: #d3d7cf;
-		--ansi-bright-black: #555753;
-		--ansi-bright-red: #ef2929;
-		--ansi-bright-green: #8ae234;
-		--ansi-bright-yellow: #fce94f;
-		--ansi-bright-blue: #729fcf;
-		--ansi-bright-magenta: #ad7fa8;
-		--ansi-bright-cyan: #34e2e2;
-		--ansi-bright-white: #eeeeec;
+		--ansi-black: rgb(0, 0, 0);
+		--ansi-red: rgb(204, 0, 0);
+		--ansi-green: rgb(78, 154, 6);
+		--ansi-yellow: rgb(196, 160, 0);
+		--ansi-blue: rgb(52, 101, 164);
+		--ansi-magenta: rgb(117, 80, 123);
+		--ansi-cyan: rgb(6, 152, 154);
+		--ansi-white: rgb(211, 215, 207);
+		--ansi-bright-black: rgb(85, 87, 83);
+		--ansi-bright-red: rgb(239, 41, 41);
+		--ansi-bright-green: rgb(138, 226, 52);
+		--ansi-bright-yellow: rgb(252, 233, 79);
+		--ansi-bright-blue: rgb(114, 159, 207);
+		--ansi-bright-magenta: rgb(173, 127, 168);
+		--ansi-bright-cyan: rgb(52, 226, 226);
+		--ansi-bright-white: rgb(238, 238, 236);
 
 		--card: 0 0% 100%;
 		--card-foreground: 240 10% 3.9%;
@@ -65,22 +65,22 @@
 		--foreground: 0 0% 98%;
 
 		/* ANSI Colors - Dark Mode */
-		--ansi-black: #2e3436;
-		--ansi-red: #cc0000;
-		--ansi-green: #4e9a06;
-		--ansi-yellow: #c4a000;
-		--ansi-blue: #3465a4;
-		--ansi-magenta: #75507b;
-		--ansi-cyan: #06989a;
-		--ansi-white: #d3d7cf;
-		--ansi-bright-black: #555753;
-		--ansi-bright-red: #ef2929;
-		--ansi-bright-green: #8ae234;
-		--ansi-bright-yellow: #fce94f;
-		--ansi-bright-blue: #729fcf;
-		--ansi-bright-magenta: #ad7fa8;
-		--ansi-bright-cyan: #34e2e2;
-		--ansi-bright-white: #eeeeec;
+		--ansi-black: rgb(46, 52, 54);
+		--ansi-red: rgb(204, 0, 0);
+		--ansi-green: rgb(78, 154, 6);
+		--ansi-yellow: rgb(196, 160, 0);
+		--ansi-blue: rgb(52, 101, 164);
+		--ansi-magenta: rgb(117, 80, 123);
+		--ansi-cyan: rgb(6, 152, 154);
+		--ansi-white: rgb(211, 215, 207);
+		--ansi-bright-black: rgb(85, 87, 83);
+		--ansi-bright-red: rgb(239, 41, 41);
+		--ansi-bright-green: rgb(138, 226, 52);
+		--ansi-bright-yellow: rgb(252, 233, 79);
+		--ansi-bright-blue: rgb(114, 159, 207);
+		--ansi-bright-magenta: rgb(173, 127, 168);
+		--ansi-bright-cyan: rgb(52, 226, 226);
+		--ansi-bright-white: rgb(238, 238, 236);
 
 		--card: 240 4% 10%;
 		--card-foreground: 0 0% 98%;
