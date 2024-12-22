@@ -181,7 +181,7 @@ export const deployApplication = async ({
 		title: titleLog,
 		description: descriptionLog,
 	});
-	const buildLink = `${await getDokployUrl()}/dashboard/project/${application.projectId}/services/application/${application.applicationId}/deployments/${deployment.deploymentId}`;
+	const buildLink = `${await getDokployUrl()}/dashboard/project/${application.projectId}/services/application/${application.applicationId}?tab=deployments&deploymentId=${deployment.deploymentId}`;
 
 	try {
 		if (application.sourceType === "github") {
@@ -290,7 +290,7 @@ export const deployRemoteApplication = async ({
 		title: titleLog,
 		description: descriptionLog,
 	});
-	const buildLink = `${await getDokployUrl()}/dashboard/project/${application.projectId}/services/application/${application.applicationId}/deployments/${deployment.deploymentId}`;
+	const buildLink = `${await getDokployUrl()}/dashboard/project/${application.projectId}/services/application/${application.applicationId}?tab=deployments&deploymentId=${deployment.deploymentId}`;
 
 	try {
 		if (application.serverId) {
