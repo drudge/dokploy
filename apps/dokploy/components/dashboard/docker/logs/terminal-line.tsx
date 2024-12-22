@@ -40,7 +40,7 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 					color: segment.style.color,
 					backgroundColor: segment.style.backgroundColor,
 				};
-				
+
 				// Escape HTML entities in the text content
 				const escapedText = segment.text
 					.replace(/&/g, "&amp;")
@@ -48,14 +48,11 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 					.replace(/>/g, "&gt;")
 					.replace(/"/g, "&quot;")
 					.replace(/'/g, "&#039;");
-				
+
 				return (
 					<span
 						key={index}
-						className={cn(
-							segment.className,
-							"transition-colors"
-						)}
+						className={cn(segment.className, "transition-colors")}
 						style={style}
 						dangerouslySetInnerHTML={{ __html: escapedText }}
 					/>
@@ -72,10 +69,7 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 			return (
 				<span
 					key={index}
-					className={cn(
-						segment.className,
-						"transition-colors"
-					)}
+					className={cn(segment.className, "transition-colors")}
 					style={segment.style || undefined}
 				>
 					{parts.map((part, partIndex) => {
@@ -86,7 +80,7 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 							.replace(/>/g, "&gt;")
 							.replace(/"/g, "&quot;")
 							.replace(/'/g, "&#039;");
-						
+
 						return part.toLowerCase() === term.toLowerCase() ? (
 							<span
 								key={partIndex}
@@ -94,7 +88,10 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 								dangerouslySetInnerHTML={{ __html: escapedPart }}
 							/>
 						) : (
-							<span key={partIndex} dangerouslySetInnerHTML={{ __html: escapedPart }} />
+							<span
+								key={partIndex}
+								dangerouslySetInnerHTML={{ __html: escapedPart }}
+							/>
 						);
 					})}
 				</span>
