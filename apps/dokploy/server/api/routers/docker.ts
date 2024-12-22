@@ -68,4 +68,22 @@ export const dockerRouter = createTRPCRouter({
 		.query(async ({ input }) => {
 			return await getContainersByAppLabel(input.appName, input.serverId);
 		}),
+
+	getContainersConfig: protectedProcedure
+		.input(
+			z.object({
+				appName: z.string(),
+				appType: z.string(),
+				serverId: z.string().optional(),
+				containerIds: z.array(z.string()),
+			}),
+		)
+		.query(async ({ input }) => {
+			const configs = await Promise.all(
+				input.containerIds.map((id) =>
+					getConfig(id, input.serverId || undefined),
+				),
+			);
+			return configs.filter((config): config is NonNullable<typeof config> => config !== null);
+		}),
 });

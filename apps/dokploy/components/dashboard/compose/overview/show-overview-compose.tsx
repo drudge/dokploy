@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { StatusTooltip } from "../../../../components/shared/status-tooltip";
 import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
@@ -30,38 +30,45 @@ type DockerContainerState =
 	| "paused"
 	| "dead";
 
+interface ContainerHealthLog {
+	Start: string;
+	End: string;
+	ExitCode: number;
+	Output: string;
+}
+
 interface ContainerHealth {
-	Status: string;
-	FailingStreak: number;
-	Log: Array<{
-		Start: string;
-		End: string;
-		ExitCode: number;
-		Output: string;
-	}>;
+	Status: string | undefined;
+	FailingStreak: number | undefined;
+	Log: Array<ContainerHealthLog> | undefined;
 }
 
 interface ContainerState {
-	Status: string;
-	Running: boolean;
-	Paused: boolean;
-	Restarting: boolean;
-	OOMKilled: boolean;
-	Dead: boolean;
-	Pid: number;
-	ExitCode: number;
-	Error: string;
-	StartedAt: string;
-	FinishedAt: string;
-	Health?: ContainerHealth;
+	Health: ContainerHealth | undefined;
+	StartedAt: string | undefined;
+	Status: string | undefined;
+	Running: boolean | undefined;
+	Paused: boolean | undefined;
+	Restarting: boolean | undefined;
+	OOMKilled: boolean | undefined;
+	Dead: boolean | undefined;
+	Pid: number | undefined;
+	ExitCode: number | undefined;
+	Error: string | undefined;
+	FinishedAt: string | undefined;
+}
+
+interface ContainerConfig {
+	Id: string;
+	State: ContainerState | undefined;
 }
 
 interface Container {
 	containerId: string;
 	name: string;
 	state: string;
-	health?: ContainerHealth;
-	startedAt?: string;
+	health: ContainerHealth | undefined;
+	startedAt: string | undefined;
 }
 
 interface Props {
@@ -84,8 +91,6 @@ interface Props {
 
 export const ShowOverviewCompose = ({ composeId }: Props) => {
 	const router = useRouter();
-	const [containers, setContainers] = useState<Container[]>([]);
-	const shouldFetchDockerData = true; // Always fetch Docker data as we handle null serverId in the API
 
 	const { data: compose, isLoading: isLoadingCompose } =
 		api.compose.one.useQuery(
@@ -128,45 +133,47 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 	);
 
 	// Fetch detailed container info including health checks
-	const containerQueries = containerDetails.map((container) =>
-		api.docker.getConfig.useQuery(
-			{
-				containerId: container.containerId,
-				serverId: compose?.serverId || undefined,
+	const { data: containerConfigs = [] } = api.docker.getContainersConfig.useQuery(
+		{
+			appName: compose?.appName || "",
+			appType: compose?.composeType || "docker-compose",
+			serverId: compose?.serverId || undefined,
+			containerIds: containerDetails.map((c) => c.containerId),
+		},
+		{
+			enabled: !!compose?.appName && containerDetails.length > 0,
+			refetchInterval: 5000 as const,
+			retry: 3,
+			onError: (error) => {
+				console.error("Failed to fetch container configs:", error);
 			},
-			{
-				enabled: !!container.containerId,
-				refetchInterval: 5000 as const,
-				retry: 3,
-				onError: (error) => {
-					console.error(
-						`Failed to fetch container config for ${container.containerId}:`,
-						error,
-					);
-				},
-			},
-		),
+		},
 	);
 
-	// Update containers with health and uptime info
-	useEffect(() => {
-		if (containerDetails) {
-			const updatedContainers = containerDetails.map((container, index) => {
-				const configQuery = containerQueries[index];
-				const config = configQuery?.data;
+	// Combine container details with their configs
+	const containers: Container[] = useMemo(() => {
+		if (!containerDetails || !containerConfigs?.length) return [];
 
-				if (!config) return container;
+		return containerDetails.map((container) => {
+			const config = containerConfigs.find(
+				(c) => c.Id === container.containerId,
+			);
 
-				return {
-					...container,
-					health: config.State?.Health,
-					startedAt: config.State?.StartedAt,
-				};
-			});
+			const baseContainer: Container = {
+				...container,
+				health: undefined,
+				startedAt: undefined,
+			};
 
-			setContainers(updatedContainers);
-		}
-	}, [containerDetails, containerQueries]);
+			if (!config?.State) return baseContainer;
+
+			return {
+				...baseContainer,
+				health: config.State.Health,
+				startedAt: config.State.StartedAt,
+			};
+		});
+	}, [containerDetails, containerConfigs]);
 
 	const mapContainerStateToStatus = (
 		state: DockerContainerState | string,

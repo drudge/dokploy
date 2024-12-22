@@ -224,3 +224,13 @@ export const containerRestart = async (containerId: string) => {
 		return config;
 	} catch (error) {}
 };
+
+export const getContainersConfig = async (
+	containerIds: string[],
+	serverId?: string | null,
+) => {
+	const configs = await Promise.all(
+		containerIds.map((id) => getConfig(id, serverId || undefined)),
+	);
+	return configs.filter((config): config is NonNullable<typeof config> => config !== null);
+};
