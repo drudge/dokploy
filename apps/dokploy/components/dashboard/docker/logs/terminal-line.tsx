@@ -37,10 +37,12 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 			const segments = parseAnsi(text);
 			return segments.map((segment, index) => {
 				// Ensure style object is properly constructed with CSS variables
-				const style = segment.style ? {
-					color: segment.style.color || 'inherit',
-					backgroundColor: segment.style.backgroundColor || 'transparent',
-				} : undefined;
+				const style = segment.style
+					? {
+							color: segment.style.color || "inherit",
+							backgroundColor: segment.style.backgroundColor || "transparent",
+						}
+					: undefined;
 
 				// Only escape < and > to preserve HTML while making text safe
 				const escapedText = segment.text
@@ -68,10 +70,15 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 				<span
 					key={index}
 					className={cn(segment.className, "transition-colors")}
-					style={segment.style ? {
-						color: segment.style.color || 'inherit',
-						backgroundColor: segment.style.backgroundColor || 'transparent',
-					} : undefined}
+					style={
+						segment.style
+							? {
+									color: segment.style.color || "inherit",
+									backgroundColor:
+										segment.style.backgroundColor || "transparent",
+								}
+							: undefined
+					}
 				>
 					{parts.map((part, partIndex) => {
 						// Only escape < and > for search terms to preserve other entities

@@ -210,9 +210,9 @@ export function parseAnsi(text: string): AnsiSegment[] {
 	// First, convert any HTML entities in the raw text to prevent double-escaping
 	const decodedText = text
 		.replace(/&quot;/g, '"')
-		.replace(/&lt;/g, '<')
-		.replace(/&gt;/g, '>')
-		.replace(/&amp;/g, '&');
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&amp;/g, "&");
 
 	// Now parse the ANSI codes
 	const html = fancyAnsi.toHtml(decodedText);
