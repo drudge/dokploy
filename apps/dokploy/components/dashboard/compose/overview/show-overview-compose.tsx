@@ -243,11 +243,13 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				health: {
 					status: enrichedContainer.health?.Status,
 					failingStreak: enrichedContainer.health?.FailingStreak,
-					logs: enrichedContainer.health?.Log?.length 
-						? enrichedContainer.health.Log[enrichedContainer.health.Log.length - 1]
-						: undefined
+					logs: enrichedContainer.health?.Log?.length
+						? enrichedContainer.health.Log[
+								enrichedContainer.health.Log.length - 1
+							]
+						: undefined,
 				},
-				rawState: config.State
+				rawState: config.State,
 			});
 
 			return enrichedContainer;
