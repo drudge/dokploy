@@ -192,9 +192,10 @@ export const getLogType = (message: string): LogStyle => {
 	return LOG_STYLES.info;
 };
 
-export function parseAnsi(text: string) {
-	const segments: { text: string; className: string }[] = [];
+export function parseAnsi(text: string): AnsiSegment[] {
+	const segments: AnsiSegment[] = [];
 	let currentIndex = 0;
+	let buffer = "";
 	let currentClasses: string[] = [];
 
 	while (currentIndex < text.length) {
@@ -202,45 +203,108 @@ export function parseAnsi(text: string) {
 
 		// No more escape sequences found
 		if (escStart === -1) {
-			if (currentIndex < text.length) {
+			if (buffer || currentIndex < text.length) {
 				segments.push({
-					text: text.slice(currentIndex),
+					text: buffer + text.slice(currentIndex),
 					className: currentClasses.join(" "),
 				});
 			}
 			break;
 		}
 
-		// Add text before escape sequence
+		// Add text before the escape sequence to buffer
 		if (escStart > currentIndex) {
-			segments.push({
-				text: text.slice(currentIndex, escStart),
-				className: currentClasses.join(" "),
-			});
+			buffer += text.slice(currentIndex, escStart);
 		}
 
 		const escEnd = text.indexOf("m", escStart);
 		if (escEnd === -1) break;
 
-		// Handle multiple codes in one sequence (e.g., \x1b[1;31m)
+		// If we have accumulated text in buffer, flush it before processing new styles
+		if (buffer) {
+			segments.push({
+				text: buffer,
+				className: currentClasses.join(" "),
+			});
+			buffer = "";
+		}
+
+		// Handle ANSI codes
 		const codesStr = text.slice(escStart + 2, escEnd);
 		const codes = codesStr.split(";").map((c) => Number.parseInt(c, 10));
 
-		if (codes.includes(0)) {
-			// Reset all formatting
-			currentClasses = [];
+		if (codes.includes(0) || codes.includes(39)) {
+			// Reset all formatting or reset foreground color
+			if (codes.includes(0)) {
+				currentClasses = [];
+			} else if (codes.includes(39)) {
+				// Only reset text color classes
+				currentClasses = currentClasses.filter((c) => !c.startsWith("text-"));
+			}
 		} else {
-			// Add new classes for each code
-			for (const code of codes) {
-				const className = ansiToTailwind[code];
-				if (className && !currentClasses.includes(className)) {
-					currentClasses.push(className);
+			let i = 0;
+			while (i < codes.length) {
+				const code = codes[i];
+
+				// Handle 8-bit colors (38;5;n and 48;5;n)
+				if ((code === 38 || code === 48) && i + 2 < codes.length) {
+					const colorType = codes[i + 1];
+					const colorValue = codes[i + 2];
+
+					if (colorType === 5 && typeof colorValue === "number") {
+						const isBackground = code === 48;
+						// Handle basic colors (0-7)
+						if (colorValue <= 7) {
+							const colorIndex = (30 +
+								colorValue) as keyof typeof ansiToTailwind;
+							const className = ansiToTailwind[colorIndex];
+							if (className) {
+								currentClasses = currentClasses.filter((c) =>
+									isBackground ? !c.startsWith("bg-") : !c.startsWith("text-"),
+								);
+								currentClasses.push(className);
+							}
+						}
+						// Handle bright colors (8-15)
+						else if (colorValue >= 8 && colorValue <= 15) {
+							const colorIndex = (90 +
+								(colorValue - 8)) as keyof typeof ansiToTailwind;
+							const className = ansiToTailwind[colorIndex];
+							if (className) {
+								currentClasses = currentClasses.filter((c) =>
+									isBackground ? !c.startsWith("bg-") : !c.startsWith("text-"),
+								);
+								currentClasses.push(className);
+							}
+						}
+					}
+					i += 3; // Skip the color parameters
+					continue;
 				}
+
+				// Handle standard ANSI codes
+				const className = ansiToTailwind[code as keyof typeof ansiToTailwind];
+				if (className) {
+					// Handle color classes specifically
+					if (className.startsWith("text-")) {
+						currentClasses = currentClasses.filter(
+							(c) => !c.startsWith("text-"),
+						);
+					} else if (className.startsWith("bg-")) {
+						currentClasses = currentClasses.filter((c) => !c.startsWith("bg-"));
+					}
+
+					if (!currentClasses.includes(className)) {
+						currentClasses.push(className);
+					}
+				}
+				i++;
 			}
 		}
 
 		currentIndex = escEnd + 1;
 	}
 
-	return segments;
+	// Filter out empty segments and segments with no text
+	return segments.filter((segment) => segment.text.length > 0);
 }
