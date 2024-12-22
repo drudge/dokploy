@@ -2,6 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
+/* fancy-ansi CSS variables for ANSI color support */
+:root {
+	--ansi-black: 0 0% 0%;
+	--ansi-red: 0 100% 50%;
+	--ansi-green: 120 100% 50%;
+	--ansi-yellow: 60 100% 50%;
+	--ansi-blue: 240 100% 50%;
+	--ansi-magenta: 300 100% 50%;
+	--ansi-cyan: 180 100% 50%;
+	--ansi-white: 0 0% 100%;
+	--ansi-bright-black: 0 0% 50%;
+	--ansi-bright-red: 0 100% 65%;
+	--ansi-bright-green: 120 100% 65%;
+	--ansi-bright-yellow: 60 100% 65%;
+	--ansi-bright-blue: 240 100% 65%;
+	--ansi-bright-magenta: 300 100% 65%;
+	--ansi-bright-cyan: 180 100% 65%;
+	--ansi-bright-white: 0 0% 85%;
+}
+
+.dark {
+	--ansi-black: 0 0% 0%;
+	--ansi-red: 0 90% 40%;
+	--ansi-green: 120 90% 40%;
+	--ansi-yellow: 60 90% 40%;
+	--ansi-blue: 240 90% 40%;
+	--ansi-magenta: 300 90% 40%;
+	--ansi-cyan: 180 90% 40%;
+	--ansi-white: 0 0% 90%;
+	--ansi-bright-black: 0 0% 40%;
+	--ansi-bright-red: 0 90% 55%;
+	--ansi-bright-green: 120 90% 55%;
+	--ansi-bright-yellow: 60 90% 55%;
+	--ansi-bright-blue: 240 90% 55%;
+	--ansi-bright-magenta: 300 90% 55%;
+	--ansi-bright-cyan: 180 90% 55%;
+	--ansi-bright-white: 0 0% 75%;
+}
+
 @layer base {
 	:root {
 		--background: 0 0% 100%;

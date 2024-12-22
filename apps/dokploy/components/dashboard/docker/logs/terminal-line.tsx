@@ -9,7 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { escapeRegExp } from "lodash";
 import React from "react";
-import { type LogLine, getLogType, parseAnsi } from "./utils";
+import { type LogLine, getLogType, parseWithFancyAnsi } from "./utils";
 
 interface LogLineProps {
 	log: LogLine;
@@ -34,37 +34,47 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 
 	const highlightMessage = (text: string, term: string) => {
 		if (!term) {
-			const segments = parseAnsi(text);
-			return segments.map((segment, index) => (
-				<span key={index} className={segment.className || undefined}>
-					{segment.text}
-				</span>
-			));
+			// If no search term, just convert ANSI to HTML
+			return (
+				<span
+					dangerouslySetInnerHTML={{
+						__html: parseWithFancyAnsi(text),
+					}}
+				/>
+			);
 		}
 
-		// For search, we need to handle both ANSI and search highlighting
-		const segments = parseAnsi(text);
-		return segments.map((segment, index) => {
-			const parts = segment.text.split(
-				new RegExp(`(${escapeRegExp(term)})`, "gi"),
-			);
-			return (
-				<span key={index} className={segment.className || undefined}>
-					{parts.map((part, partIndex) =>
-						part.toLowerCase() === term.toLowerCase() ? (
-							<span
-								key={partIndex}
-								className="bg-yellow-200 dark:bg-yellow-900"
-							>
-								{part}
-							</span>
-						) : (
-							part
-						),
-					)}
-				</span>
-			);
-		});
+		// For search highlighting, we'll use Option A:
+		// 1. Replace search terms with markers first
+		// 2. Convert to HTML with fancy-ansi
+		// 3. Replace markers with highlight spans
+		const HIGHLIGHT_START = "[[HIGHLIGHT_START]]";
+		const HIGHLIGHT_END = "[[HIGHLIGHT_END]]";
+
+		// Step 1: Add markers around matching terms
+		const markedText = text.replace(
+			new RegExp(`(${escapeRegExp(term)})`, "gi"),
+			`${HIGHLIGHT_START}$1${HIGHLIGHT_END}`,
+		);
+
+		// Step 2: Convert to HTML with fancy-ansi
+		const html = parseWithFancyAnsi(markedText);
+
+		// Step 3: Replace markers with highlight spans
+		const highlightedHtml = html
+			.replace(
+				new RegExp(escapeRegExp(HIGHLIGHT_START), "g"),
+				'<span class="bg-yellow-200/50 dark:bg-yellow-900/50">',
+			)
+			.replace(new RegExp(escapeRegExp(HIGHLIGHT_END), "g"), "</span>");
+
+		return (
+			<span
+				dangerouslySetInnerHTML={{
+					__html: highlightedHtml,
+				}}
+			/>
+		);
 	};
 
 	const tooltip = (color: string, timestamp: string | null) => {
