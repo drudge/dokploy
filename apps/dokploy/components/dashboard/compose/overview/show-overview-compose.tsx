@@ -142,7 +142,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				containerIds: containerDetails.map((c) => c.containerId),
 			},
 			{
-				enabled: !!compose?.appName && containerDetails.length > 0,
+				enabled: !!compose?.appName && !!compose?.serverId && containerDetails.length > 0,
 				refetchInterval: 5000 as const,
 				retry: 3,
 				onError: (error) => {
@@ -153,7 +153,15 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 
 	// Combine container details with their configs
 	const containers: Container[] = useMemo(() => {
-		if (!containerDetails || !containerConfigs?.length) return [];
+		if (!compose?.serverId) {
+			console.warn("No serverId available for container configs");
+			return [];
+		}
+
+		if (!containerDetails || !containerConfigs?.length) {
+			console.warn("No container details or configs available");
+			return [];
+		}
 
 		return containerDetails.map((container) => {
 			const config = containerConfigs.find(
@@ -166,7 +174,12 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				startedAt: undefined,
 			};
 
-			if (!config?.State) return baseContainer;
+			if (!config?.State) {
+				console.warn(
+					`No state found for container ${container.containerId}`,
+				);
+				return baseContainer;
+			}
 
 			return {
 				...baseContainer,
@@ -174,7 +187,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				startedAt: config.State.StartedAt,
 			};
 		});
-	}, [containerDetails, containerConfigs]);
+	}, [containerDetails, containerConfigs, compose?.serverId]);
 
 	const mapContainerStateToStatus = (
 		state: DockerContainerState | string,
@@ -275,7 +288,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 												/>
 											</TableCell>
 											<TableCell>
-												{container.startedAt
+												{container?.startedAt && container.state.toLowerCase() === "running"
 													? formatDistanceToNow(new Date(container.startedAt), {
 															addSuffix: true,
 														})
