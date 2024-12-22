@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { Loader2 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StatusTooltip } from "../../../../components/shared/status-tooltip";
 import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
@@ -11,6 +11,15 @@ import {
 	CardTitle,
 } from "../../../../components/ui/card";
 import { ScrollArea } from "../../../../components/ui/scroll-area";
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue,
+} from "../../../../components/ui/select";
 import {
 	Table,
 	TableBody,
@@ -92,6 +101,10 @@ interface Props {
 export const ShowOverviewCompose = ({ composeId }: Props) => {
 	const router = useRouter();
 
+	const [containerAppName, setContainerAppName] = useState<string>();
+	const [containerId, setContainerId] = useState<string>();
+
+	// Get compose data
 	const { data: compose, isLoading: isLoadingCompose } =
 		api.compose.one.useQuery(
 			{ composeId },
@@ -99,6 +112,9 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				enabled: !!composeId,
 			},
 		);
+
+	// Get serverId early to use in queries
+	const serverId = compose?.serverId;
 
 	const { data: services = [], isLoading: isLoadingServices } =
 		api.compose.loadServices.useQuery(
@@ -112,6 +128,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			},
 		);
 
+	// Query container details with real-time updates
 	const {
 		data: containerDetails = [],
 		isLoading: isLoadingContainers,
@@ -120,10 +137,10 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		{
 			appName: compose?.appName || "",
 			appType: compose?.composeType || "docker-compose",
-			serverId: compose?.serverId || undefined,
+			serverId: typeof serverId === "string" ? serverId : "",
 		},
 		{
-			enabled: !!compose?.appName,
+			enabled: !!compose?.appName && typeof serverId === "string",
 			refetchInterval: 5000 as const,
 			retry: 3,
 			onError: (error) => {
@@ -131,10 +148,6 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			},
 		},
 	);
-
-	// Fetch detailed container info including health checks
-	// Ensure serverId is a string before enabling the query
-	const serverId = compose?.serverId;
 	const queryEnabled =
 		!!compose?.appName &&
 		typeof serverId === "string" &&
@@ -257,19 +270,37 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 	}, [containerDetails, containerConfigs, compose?.serverId]);
 
 	// Sync container selection with router query
+	// Sync container selection with router query
+	// Handle container selection and router query sync
 	useEffect(() => {
-		if (router.query.containerId && containers.length > 0) {
-			const container = containers.find(
-				(c) => c.containerId === router.query.containerId,
-			);
-			if (!container) {
-				console.warn(
-					`Selected container ${router.query.containerId} not found in available containers:`,
-					containers.map((c) => ({ id: c.containerId, name: c.name })),
-				);
-			}
+		if (!containers?.length) {
+			console.debug('No containers available yet');
+			return;
 		}
-	}, [containers, router.query.containerId]);
+
+		// Try to find container by ID from router query
+		const container = containers.find(
+			(c) => c.containerId === router.query.containerId
+		);
+
+		if (container) {
+			console.debug('Found container from query:', container.name);
+			setContainerAppName(container.name);
+			setContainerId(container.containerId);
+		} else if (!containerId || !containerAppName) {
+			// No container selected or not found in current list, fallback to first
+			console.debug('Falling back to first container:', containers[0]?.name);
+			setContainerAppName(containers[0].name);
+			setContainerId(containers[0].containerId);
+			
+			// Update router query to match selected container
+			const query = {
+				...router.query,
+				containerId: containers[0].containerId,
+			};
+			router.push({ query }, undefined, { shallow: true });
+		}
+	}, [containers, router.query.containerId, containerId, containerAppName]);
 
 	const mapContainerStateToStatus = (
 		state: DockerContainerState | string,
@@ -306,6 +337,47 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				</div>
 			</CardHeader>
 			<CardContent>
+				<div className="flex flex-row gap-4 mb-4">
+					<Select
+						onValueChange={(value) => {
+							const container = containers.find((c) => c.name === value);
+							if (container) {
+								setContainerAppName(value);
+								setContainerId(container.containerId);
+								const query = {
+									...router.query,
+									containerId: container.containerId,
+								};
+								router.push({ query });
+							}
+						}}
+						value={containerAppName}
+					>
+						<SelectTrigger className="w-[300px]">
+							{isLoadingContainers ? (
+								<div className="flex flex-row gap-2 items-center justify-center text-sm text-muted-foreground">
+									<span>Loading...</span>
+									<Loader2 className="animate-spin size-4" />
+								</div>
+							) : (
+								<SelectValue placeholder="Select a container" />
+							)}
+						</SelectTrigger>
+						<SelectContent>
+							<SelectGroup>
+								{containers.map((container) => (
+									<SelectItem
+										key={container.containerId}
+										value={container.name}
+									>
+										{container.name} ({container.containerId}) {container.state}
+									</SelectItem>
+								))}
+								<SelectLabel>Containers ({containers.length})</SelectLabel>
+							</SelectGroup>
+						</SelectContent>
+					</Select>
+				</div>
 				<ScrollArea className="rounded-md border">
 					<Table>
 						<TableHeader>
@@ -337,20 +409,20 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 										</div>
 									</TableCell>
 								</TableRow>
-							) : services.length === 0 ? (
+							) : containers.length === 0 ? (
 								<TableRow>
 									<TableCell colSpan={5} className="h-24 text-center">
-										No services found
+										No containers found
 									</TableCell>
 								</TableRow>
 							) : (
-								services.map((serviceName: string) => {
-									const container = findMatchingContainer(
-										serviceName,
-										containers,
-									);
-									return container ? (
-										<TableRow key={container.containerId}>
+								containers.map((container) => {
+									const isSelected = container.containerId === containerId;
+									return (
+										<TableRow
+											key={container.containerId}
+											className={isSelected ? "bg-muted/50" : ""}
+										>
 											<TableCell className="font-medium">
 												{container.name}
 											</TableCell>
@@ -407,51 +479,6 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 																...router.query,
 																tab: "monitoring",
 																containerId: container.containerId,
-															};
-															router.push({ query });
-														}}
-													>
-														<ExternalLink className="h-4 w-4 mr-2" />
-														Monitor
-													</Button>
-												</div>
-											</TableCell>
-										</TableRow>
-									) : (
-										<TableRow key={serviceName}>
-											<TableCell className="font-medium">
-												{serviceName}
-											</TableCell>
-											<TableCell>
-												<StatusTooltip status="idle" />
-											</TableCell>
-											<TableCell>-</TableCell>
-											<TableCell>-</TableCell>
-											<TableCell className="text-right">
-												<div className="flex justify-end gap-2">
-													<Button
-														variant="outline"
-														size="sm"
-														onClick={() => {
-															const query = {
-																...router.query,
-																tab: "logs",
-																containerId: undefined, // Explicitly clear containerId when no container exists
-															};
-															router.push({ query });
-														}}
-													>
-														<FileText className="h-4 w-4 mr-2" />
-														Logs
-													</Button>
-													<Button
-														variant="outline"
-														size="sm"
-														onClick={() => {
-															const query = {
-																...router.query,
-																tab: "monitoring",
-																containerId: undefined, // Explicitly clear containerId when no container exists
 															};
 															router.push({ query });
 														}}

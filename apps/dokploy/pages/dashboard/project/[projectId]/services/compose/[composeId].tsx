@@ -237,7 +237,12 @@ const Service = (
 					</TabsContent>
 					<TabsContent value="overview">
 						<div className="flex flex-col gap-4 pt-2.5">
-							<ShowOverviewCompose composeId={composeId} />
+							<ShowOverviewCompose
+								composeId={composeId}
+								serverId={data?.serverId || ""}
+								appName={data?.appName || ""}
+								appType={data?.composeType || "docker-compose"}
+							/>
 						</div>
 					</TabsContent>
 					<TabsContent value="environment">
