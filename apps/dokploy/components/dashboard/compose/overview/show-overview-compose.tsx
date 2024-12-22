@@ -447,21 +447,24 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 												<StatusTooltip
 													status={mapContainerStateToStatus(
 														container.state,
-														container.health
+														container.health,
 													)}
 												/>
 											</TableCell>
 											<TableCell>
 												<Badge
 													variant={
-														container.health?.Status?.toLowerCase() === "healthy"
+														container.health?.Status?.toLowerCase() ===
+														"healthy"
 															? "default"
-															: container.health?.Status?.toLowerCase() === "unhealthy"
-															? "destructive"
-															: "secondary"
+															: container.health?.Status?.toLowerCase() ===
+																	"unhealthy"
+																? "destructive"
+																: "secondary"
 													}
 													className={
-														container.health?.Status?.toLowerCase() === "healthy"
+														container.health?.Status?.toLowerCase() ===
+														"healthy"
 															? "bg-green-500 hover:bg-green-500/90"
 															: undefined
 													}
@@ -473,7 +476,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 												{container?.startedAt
 													? formatDistanceToNow(new Date(container.startedAt), {
 															addSuffix: true,
-													  })
+														})
 													: "-"}
 											</TableCell>
 											<TableCell className="text-right">
@@ -484,7 +487,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 														onClick={() => {
 															// Find matching container and update query
 															const matchingContainer = containers.find(
-																(c) => c.containerId === container.containerId
+																(c) => c.containerId === container.containerId,
 															);
 															if (matchingContainer) {
 																const query = {
@@ -492,7 +495,9 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 																	tab: "logs",
 																	containerId: matchingContainer.containerId,
 																};
-																router.push({ query }, undefined, { shallow: true });
+																router.push({ query }, undefined, {
+																	shallow: true,
+																});
 															}
 														}}
 													>
@@ -505,7 +510,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 														onClick={() => {
 															// Find matching container and update query
 															const matchingContainer = containers.find(
-																(c) => c.containerId === container.containerId
+																(c) => c.containerId === container.containerId,
 															);
 															if (matchingContainer) {
 																const query = {
@@ -513,7 +518,9 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 																	tab: "monitoring",
 																	containerId: matchingContainer.containerId,
 																};
-																router.push({ query }, undefined, { shallow: true });
+																router.push({ query }, undefined, {
+																	shallow: true,
+																});
 															}
 														}}
 													>
