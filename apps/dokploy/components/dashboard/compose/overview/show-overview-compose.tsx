@@ -99,6 +99,9 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			},
 		);
 
+	const serverId = compose?.serverId || undefined;
+	const shouldFetchDockerData = !!serverId;
+
 	const {
 		data: containerDetails = [],
 		isLoading: isLoadingContainers,
@@ -107,10 +110,10 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		{
 			appName: compose?.appName || "",
 			appType: compose?.composeType || "docker-compose",
-			serverId: compose?.serverId,
+			serverId: compose?.serverId || undefined,
 		},
 		{
-			enabled: !!compose?.appName,
+			enabled: !!compose?.appName && shouldFetchDockerData,
 			refetchInterval: 5000 as const,
 			retry: 3,
 			onError: (error) => {
@@ -124,10 +127,10 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		api.docker.getConfig.useQuery(
 			{
 				containerId: container.containerId,
-				serverId: compose?.serverId,
+				serverId: compose?.serverId || undefined,
 			},
 			{
-				enabled: !!container.containerId,
+				enabled: !!container.containerId && shouldFetchDockerData,
 				refetchInterval: 5000 as const,
 				retry: 3,
 				onError: (error) => {
@@ -207,7 +210,13 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{containerError ? (
+							{!shouldFetchDockerData ? (
+								<TableRow>
+									<TableCell colSpan={5} className="h-24 text-center">
+										No server configured. Docker container information is not available.
+									</TableCell>
+								</TableRow>
+							) : containerError ? (
 								<TableRow>
 									<TableCell colSpan={5} className="h-24 text-center text-destructive">
 										Failed to fetch container details. Please try again.
