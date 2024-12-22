@@ -133,14 +133,20 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 	);
 
 	// Fetch detailed container info including health checks
-	// Debug logs for query conditions
-	const queryEnabled = !!compose?.appName && !!compose?.serverId && containerDetails.length > 0;
-	console.log('Container Configs Query Conditions:', {
+	// Ensure serverId is a string before enabling the query
+	const serverId = compose?.serverId;
+	const queryEnabled =
+		!!compose?.appName &&
+		typeof serverId === "string" &&
+		containerDetails.length > 0;
+
+	console.log("Container Configs Query Conditions:", {
 		hasAppName: !!compose?.appName,
-		hasServerId: !!compose?.serverId,
+		hasServerId: !!serverId,
+		isServerIdString: typeof serverId === "string",
 		containerDetailsLength: containerDetails.length,
 		enabled: queryEnabled,
-		serverId: compose?.serverId,
+		serverId,
 		containerIds: containerDetails.map((c) => c.containerId),
 	});
 
@@ -149,7 +155,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			{
 				appName: compose?.appName || "",
 				appType: compose?.composeType || "docker-compose",
-				serverId: compose?.serverId || undefined,
+				serverId,
 				containerIds: containerDetails.map((c) => c.containerId),
 			},
 			{
