@@ -84,14 +84,16 @@ export const getConfig = async (containerId: string, serverId?: string) => {
 		}
 
 		if (stderr) {
-			console.error(`Error: ${stderr}`);
-			return;
+			console.error(`Error inspecting container ${containerId}:`, stderr);
+			return null;
 		}
 
 		const config = JSON.parse(stdout);
-
 		return config;
-	} catch (error) {}
+	} catch (error) {
+		console.error("Failed to getConfig for container:", containerId, error);
+		return null;
+	}
 };
 
 export const getContainersByAppNameMatch = async (
