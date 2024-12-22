@@ -12,7 +12,7 @@ export const dockerRouter = createTRPCRouter({
 	getContainers: protectedProcedure
 		.input(
 			z.object({
-				serverId: z.string().nullable(),
+				serverId: z.string().optional(),
 			}),
 		)
 		.query(async ({ input }) => {
@@ -33,7 +33,7 @@ export const dockerRouter = createTRPCRouter({
 		.input(
 			z.object({
 				containerId: z.string().min(1),
-				serverId: z.string().nullable(),
+				serverId: z.string().optional(),
 			}),
 		)
 		.query(async ({ input }) => {
@@ -47,7 +47,7 @@ export const dockerRouter = createTRPCRouter({
 					.union([z.literal("stack"), z.literal("docker-compose")])
 					.optional(),
 				appName: z.string().min(1),
-				serverId: z.string().nullable(),
+				serverId: z.string().optional(),
 			}),
 		)
 		.query(async ({ input }) => {
@@ -62,7 +62,7 @@ export const dockerRouter = createTRPCRouter({
 		.input(
 			z.object({
 				appName: z.string().min(1),
-				serverId: z.string().nullable(),
+				serverId: z.string().optional(),
 			}),
 		)
 		.query(async ({ input }) => {

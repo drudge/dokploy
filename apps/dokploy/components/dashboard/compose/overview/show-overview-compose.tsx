@@ -72,7 +72,7 @@ type ComposeType = {
 	composeId: string;
 	appName: string;
 	composeType: "docker-compose" | "stack";
-	serverId: string | null;
+	serverId: string | undefined;
 };
 import { ExternalLink, FileText } from "lucide-react";
 import { useRouter } from "next/router";
@@ -85,6 +85,7 @@ interface Props {
 export const ShowOverviewCompose = ({ composeId }: Props) => {
 	const router = useRouter();
 	const [containers, setContainers] = useState<Container[]>([]);
+	const shouldFetchDockerData = true; // Always fetch Docker data as we handle null serverId in the API
 
 	const { data: compose, isLoading: isLoadingCompose } =
 		api.compose.one.useQuery(
@@ -92,7 +93,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			{
 				enabled: !!composeId,
 			},
-		) as { data: ComposeType | undefined; isLoading: boolean };
+		);
 
 	const { data: services = [], isLoading: isLoadingServices } =
 		api.compose.loadServices.useQuery(
@@ -106,9 +107,6 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			},
 		);
 
-	const serverId = compose?.serverId;  // can be string or null
-	const shouldFetchDockerData = serverId !== null;
-
 	const {
 		data: containerDetails = [],
 		isLoading: isLoadingContainers,
@@ -117,10 +115,10 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		{
 			appName: compose?.appName || "",
 			appType: compose?.composeType || "docker-compose",
-			serverId: compose?.serverId ?? null,
+			serverId: compose?.serverId || undefined,
 		},
 		{
-			enabled: !!compose?.appName && shouldFetchDockerData,
+			enabled: !!compose?.appName,
 			refetchInterval: 5000 as const,
 			retry: 3,
 			onError: (error) => {
@@ -134,10 +132,10 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		api.docker.getConfig.useQuery(
 			{
 				containerId: container.containerId,
-				serverId: compose?.serverId ?? null,
+				serverId: compose?.serverId || undefined,
 			},
 			{
-				enabled: !!container.containerId && shouldFetchDockerData,
+				enabled: !!container.containerId,
 				refetchInterval: 5000 as const,
 				retry: 3,
 				onError: (error) => {
@@ -217,14 +215,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{!shouldFetchDockerData ? (
-								<TableRow>
-									<TableCell colSpan={5} className="h-24 text-center">
-										No server configured. Docker container information is not
-										available.
-									</TableCell>
-								</TableRow>
-							) : containerError ? (
+							{containerError ? (
 								<TableRow>
 									<TableCell
 										colSpan={5}
@@ -249,8 +240,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 										No services found
 									</TableCell>
 								</TableRow>
-							) : null}
-							{services.map((serviceName: string) => {
+							) : services.map((serviceName: string) => {
 								const container = containers.find((c) =>
 									c.name.includes(serviceName),
 								);

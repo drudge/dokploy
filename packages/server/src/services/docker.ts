@@ -3,7 +3,7 @@ import {
 	execAsyncRemote,
 } from "@dokploy/server/utils/process/execAsync";
 
-export const getContainers = async (serverId?: string | null) => {
+export const getContainers = async (serverId?: string) => {
 	try {
 		const command =
 			"docker ps -a --format 'CONTAINER ID : {{.ID}} | Name: {{.Names}} | Image: {{.Image}} | Ports: {{.Ports}} | State: {{.State}} | Status: {{.Status}}'";
@@ -70,7 +70,7 @@ export const getContainers = async (serverId?: string | null) => {
 
 export const getConfig = async (
 	containerId: string,
-	serverId?: string | null,
+	serverId?: string,
 ) => {
 	try {
 		const command = `docker inspect ${containerId} --format='{{json .}}'`;
@@ -100,7 +100,7 @@ export const getConfig = async (
 export const getContainersByAppNameMatch = async (
 	appName: string,
 	appType?: "stack" | "docker-compose",
-	serverId?: string | null,
+	serverId?: string,
 ) => {
 	try {
 		let result: string[] = [];
@@ -159,7 +159,7 @@ export const getContainersByAppNameMatch = async (
 
 export const getContainersByAppLabel = async (
 	appName: string,
-	serverId?: string | null,
+	serverId?: string,
 ) => {
 	try {
 		let stdout = "";
