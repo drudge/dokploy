@@ -5,6 +5,7 @@ import { ShowDeploymentsCompose } from "@/components/dashboard/compose/deploymen
 import { ShowDomainsCompose } from "@/components/dashboard/compose/domains/show-domains";
 import { ShowEnvironmentCompose } from "@/components/dashboard/compose/enviroment/show";
 import { ShowGeneralCompose } from "@/components/dashboard/compose/general/show";
+import { ShowOverviewCompose } from "@/components/dashboard/compose/overview/show-overview-compose";
 import { ShowDockerLogsCompose } from "@/components/dashboard/compose/logs/show";
 import { ShowMonitoringCompose } from "@/components/dashboard/compose/monitoring/show";
 import { UpdateCompose } from "@/components/dashboard/compose/update-compose";
@@ -47,7 +48,8 @@ type TabState =
 	| "advanced"
 	| "deployments"
 	| "domains"
-	| "monitoring";
+	| "monitoring"
+	| "overview";
 
 const Service = (
 	props: InferGetServerSidePropsType<typeof getServerSideProps>,
@@ -207,6 +209,7 @@ const Service = (
 							)}
 						>
 							<TabsTrigger value="general">General</TabsTrigger>
+							<TabsTrigger value="overview">Overview</TabsTrigger>
 							{data?.composeType === "docker-compose" && (
 								<TabsTrigger value="environment">Environment</TabsTrigger>
 							)}
@@ -230,6 +233,11 @@ const Service = (
 					<TabsContent value="general">
 						<div className="flex flex-col gap-4 pt-2.5">
 							<ShowGeneralCompose composeId={composeId} />
+						</div>
+					</TabsContent>
+					<TabsContent value="overview">
+						<div className="flex flex-col gap-4 pt-2.5">
+							<ShowOverviewCompose composeId={composeId} />
 						</div>
 					</TabsContent>
 					<TabsContent value="environment">
