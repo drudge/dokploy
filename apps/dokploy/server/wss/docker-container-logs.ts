@@ -6,7 +6,7 @@ import { WebSocketServer } from "ws";
 import { getShell } from "./utils";
 
 function escapeHtmlForLog(raw: string | null | undefined): string {
-	if (raw == null) return '';
+	if (raw == null) return "";
 	return raw
 		.replace(/&/g, "&amp;")
 		.replace(/</g, "&lt;")

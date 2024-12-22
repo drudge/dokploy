@@ -38,7 +38,7 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 			return segments.map((segment, index) => {
 				const style = segment.style && {
 					color: segment.style.color,
-					backgroundColor: segment.style.backgroundColor
+					backgroundColor: segment.style.backgroundColor,
 				};
 				return (
 					<span

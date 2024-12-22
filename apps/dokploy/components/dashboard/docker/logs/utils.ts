@@ -221,45 +221,57 @@ export function parseAnsi(text: string): AnsiSegment[] {
 			// Extract style and class from span tag
 			const styleMatch = part.match(/style="([^"]+)"/);
 			const classMatch = part.match(/class="([^"]+)"/);
-			
+
 			currentStyle = {};
 			if (styleMatch?.[1]) {
 				// Extract RGB colors and map to CSS variables
-				const rgbMatch = styleMatch[1].match(/color: rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-				const bgRgbMatch = styleMatch[1].match(/background-color: rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+				const rgbMatch = styleMatch[1].match(
+					/color: rgb\((\d+),\s*(\d+),\s*(\d+)\)/,
+				);
+				const bgRgbMatch = styleMatch[1].match(
+					/background-color: rgb\((\d+),\s*(\d+),\s*(\d+)\)/,
+				);
 
 				const rgbToAnsiVar = (r: string, g: string, b: string): string => {
 					const rgbMap: Record<string, string> = {
-						'0,0,0': '--ansi-black',
-						'204,0,0': '--ansi-red',
-						'78,154,6': '--ansi-green',
-						'196,160,0': '--ansi-yellow',
-						'52,101,164': '--ansi-blue',
-						'117,80,123': '--ansi-magenta',
-						'6,152,154': '--ansi-cyan',
-						'211,215,207': '--ansi-white',
-						'85,87,83': '--ansi-bright-black',
-						'239,41,41': '--ansi-bright-red',
-						'138,226,52': '--ansi-bright-green',
-						'252,233,79': '--ansi-bright-yellow',
-						'114,159,207': '--ansi-bright-blue',
-						'173,127,168': '--ansi-bright-magenta',
-						'52,226,226': '--ansi-bright-cyan',
-						'238,238,236': '--ansi-bright-white'
+						"0,0,0": "--ansi-black",
+						"204,0,0": "--ansi-red",
+						"78,154,6": "--ansi-green",
+						"196,160,0": "--ansi-yellow",
+						"52,101,164": "--ansi-blue",
+						"117,80,123": "--ansi-magenta",
+						"6,152,154": "--ansi-cyan",
+						"211,215,207": "--ansi-white",
+						"85,87,83": "--ansi-bright-black",
+						"239,41,41": "--ansi-bright-red",
+						"138,226,52": "--ansi-bright-green",
+						"252,233,79": "--ansi-bright-yellow",
+						"114,159,207": "--ansi-bright-blue",
+						"173,127,168": "--ansi-bright-magenta",
+						"52,226,226": "--ansi-bright-cyan",
+						"238,238,236": "--ansi-bright-white",
 					};
 					const key = `${r},${g},${b}`;
-					return `var(${rgbMap[key] || '--ansi-white'})`;
+					return `var(${rgbMap[key] || "--ansi-white"})`;
 				};
 
 				if (rgbMatch?.[1] && rgbMatch?.[2] && rgbMatch?.[3]) {
-					currentStyle.color = rgbToAnsiVar(rgbMatch[1], rgbMatch[2], rgbMatch[3]);
+					currentStyle.color = rgbToAnsiVar(
+						rgbMatch[1],
+						rgbMatch[2],
+						rgbMatch[3],
+					);
 				}
 
 				if (bgRgbMatch?.[1] && bgRgbMatch?.[2] && bgRgbMatch?.[3]) {
-					currentStyle.backgroundColor = rgbToAnsiVar(bgRgbMatch[1], bgRgbMatch[2], bgRgbMatch[3]);
+					currentStyle.backgroundColor = rgbToAnsiVar(
+						bgRgbMatch[1],
+						bgRgbMatch[2],
+						bgRgbMatch[3],
+					);
 				}
 			}
-			
+
 			currentClass = classMatch?.[1] ?? "";
 		} else if (part.startsWith("</span>")) {
 			currentStyle = undefined;
@@ -268,7 +280,8 @@ export function parseAnsi(text: string): AnsiSegment[] {
 			segments.push({
 				text: part,
 				className: currentClass,
-				...(currentStyle && Object.keys(currentStyle).length > 0 && { style: currentStyle }),
+				...(currentStyle &&
+					Object.keys(currentStyle).length > 0 && { style: currentStyle }),
 			});
 		}
 	}
