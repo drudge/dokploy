@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { StatusTooltip } from "../../../../components/shared/status-tooltip";
 import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
@@ -155,7 +155,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			{
 				appName: compose?.appName || "",
 				appType: compose?.composeType || "docker-compose",
-				serverId,
+				serverId: typeof serverId === "string" ? serverId : "",
 				containerIds: containerDetails.map((c) => c.containerId),
 			},
 			{
@@ -169,6 +169,28 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		);
 
 	// Combine container details with their configs
+	// Helper function to find matching container with flexible name matching
+	const findMatchingContainer = (serviceName: string, containers: Container[]) => {
+		// Try exact match first
+		const exactMatch = containers.find((c) => c.name === serviceName);
+		if (exactMatch) return exactMatch;
+
+		// Try matching service name within container name (for prefixed/suffixed names)
+		const partialMatch = containers.find((c) => 
+			c.name.includes(serviceName) || serviceName.includes(c.name)
+		);
+		
+		if (partialMatch) {
+			console.log(`Found partial match for service ${serviceName}:`, partialMatch.name);
+		} else {
+			console.warn(`No container match found for service ${serviceName}. Available containers:`, 
+				containers.map(c => c.name)
+			);
+		}
+		
+		return partialMatch;
+	};
+
 	const containers: Container[] = useMemo(() => {
 		if (!compose?.serverId) {
 			console.warn("No serverId available for container configs", { compose });
@@ -185,29 +207,52 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			return [];
 		}
 
-		return containerDetails.map((container) => {
+		return containerDetails.map((detail) => {
 			const config = containerConfigs.find(
-				(c) => c.Id === container.containerId,
+				(c) => c.Id === detail.containerId,
 			);
 
 			const baseContainer: Container = {
-				...container,
+				...detail,
 				health: undefined,
 				startedAt: undefined,
 			};
 
 			if (!config?.State) {
-				console.warn(`No state found for container ${container.containerId}`);
+				console.warn(`No state found for container ${detail.containerId} (${detail.name})`);
 				return baseContainer;
 			}
 
-			return {
+			const enrichedContainer: Container = {
 				...baseContainer,
 				health: config.State.Health,
 				startedAt: config.State.StartedAt,
 			};
+			
+			console.log(`Container ${enrichedContainer.name} details:`, {
+				state: enrichedContainer.state,
+				startedAt: enrichedContainer.startedAt,
+				health: enrichedContainer.health?.Status
+			});
+			
+			return enrichedContainer;
 		});
 	}, [containerDetails, containerConfigs, compose?.serverId]);
+
+	// Sync container selection with router query
+	useEffect(() => {
+		if (router.query.containerId && containers.length > 0) {
+			const container = containers.find(
+				(c) => c.containerId === router.query.containerId
+			);
+			if (!container) {
+				console.warn(
+					`Selected container ${router.query.containerId} not found in available containers:`,
+					containers.map(c => ({ id: c.containerId, name: c.name }))
+				);
+			}
+		}
+	}, [containers, router.query.containerId]);
 
 	const mapContainerStateToStatus = (
 		state: DockerContainerState | string,
@@ -283,9 +328,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 								</TableRow>
 							) : (
 								services.map((serviceName: string) => {
-									const container = containers.find(
-										(c) => c.name === serviceName,
-									);
+									const container = findMatchingContainer(serviceName, containers);
 									return container ? (
 										<TableRow key={container.containerId}>
 											<TableCell className="font-medium">
