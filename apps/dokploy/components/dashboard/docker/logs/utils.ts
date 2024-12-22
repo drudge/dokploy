@@ -1,4 +1,4 @@
-import { FancyAnsi } from 'fancy-ansi';
+import { FancyAnsi } from "fancy-ansi";
 
 export type LogType = "error" | "warning" | "success" | "info" | "debug";
 export type LogVariant = "red" | "yellow" | "green" | "blue" | "orange";
@@ -199,25 +199,25 @@ const fancyAnsi = new FancyAnsi();
 export function parseAnsi(text: string) {
 	const segments: { text: string; className: string }[] = [];
 	const html = fancyAnsi.toHtml(text);
-	
+
 	// Split HTML into segments while preserving ANSI styling
 	const parts = html.split(/(<[^>]+>|<\/[^>]+>)/);
-	let currentClass = '';
-	
+	let currentClass = "";
+
 	for (const part of parts) {
-		if (part.startsWith('<span')) {
+		if (part.startsWith("<span")) {
 			// Extract class from span tag
 			const match = part.match(/class="([^"]+)"/);
-			currentClass = match?.[1] ?? '';
-		} else if (part.startsWith('</span>')) {
-			currentClass = '';
+			currentClass = match?.[1] ?? "";
+		} else if (part.startsWith("</span>")) {
+			currentClass = "";
 		} else if (part.trim()) {
 			segments.push({
 				text: part,
-				className: currentClass
+				className: currentClass,
 			});
 		}
 	}
-	
+
 	return segments;
 }
