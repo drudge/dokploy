@@ -36,7 +36,6 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 		if (!term) {
 			const segments = parseAnsi(text);
 			return segments.map((segment, index) => {
-				// Ensure style object is properly constructed with CSS variables
 				const style = segment.style
 					? {
 							color: segment.style.color || "inherit",
@@ -44,17 +43,12 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 						}
 					: undefined;
 
-				// Only escape < and > to preserve HTML while making text safe
-				const escapedText = segment.text
-					.replace(/</g, "&lt;")
-					.replace(/>/g, "&gt;");
-
 				return (
 					<span
 						key={index}
 						className={cn(segment.className, "transition-colors")}
 						style={style}
-						dangerouslySetInnerHTML={{ __html: escapedText }}
+						dangerouslySetInnerHTML={{ __html: segment.text }}
 					/>
 				);
 			});
@@ -63,40 +57,37 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 		// For search, we need to handle both ANSI and search highlighting
 		const segments = parseAnsi(text);
 		return segments.map((segment, index) => {
+			// Create a wrapper span that preserves the original ANSI styling
+			const style = segment.style
+				? {
+						color: segment.style.color || "inherit",
+						backgroundColor: segment.style.backgroundColor || "transparent",
+					}
+				: undefined;
+
+			// Split the text by search term while preserving case
 			const parts = segment.text.split(
-				new RegExp(`(${escapeRegExp(term)})`, "gi"),
+				new RegExp(`(${escapeRegExp(term)})`, "gi")
 			);
+
 			return (
 				<span
 					key={index}
 					className={cn(segment.className, "transition-colors")}
-					style={
-						segment.style
-							? {
-									color: segment.style.color || "inherit",
-									backgroundColor:
-										segment.style.backgroundColor || "transparent",
-								}
-							: undefined
-					}
+					style={style}
 				>
 					{parts.map((part, partIndex) => {
-						// Only escape < and > for search terms to preserve other entities
-						const escapedPart = part
-							.replace(/</g, "&lt;")
-							.replace(/>/g, "&gt;");
-
-						return part.toLowerCase() === term.toLowerCase() ? (
+						const isMatch = part.toLowerCase() === term.toLowerCase();
+						// No need to escape the content since fancy-ansi already handles HTML entities
+						return (
 							<span
 								key={partIndex}
-								className="bg-yellow-200/50 dark:bg-yellow-900/50"
-								dangerouslySetInnerHTML={{ __html: escapedPart }}
-							/>
-						) : (
-							<span
-								key={partIndex}
-								dangerouslySetInnerHTML={{ __html: escapedPart }}
-							/>
+								className={cn({
+									"bg-yellow-200/50 dark:bg-yellow-900/50": isMatch,
+								})}
+							>
+								{part}
+							</span>
 						);
 					})}
 				</span>
