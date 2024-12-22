@@ -68,10 +68,7 @@ export const getContainers = async (serverId?: string) => {
 	}
 };
 
-export const getConfig = async (
-	containerId: string,
-	serverId?: string,
-) => {
+export const getConfig = async (containerId: string, serverId?: string) => {
 	try {
 		const command = `docker inspect ${containerId} --format='{{json .}}'`;
 		let stdout = "";
@@ -232,5 +229,7 @@ export const getContainersConfig = async (
 	const configs = await Promise.all(
 		containerIds.map((id) => getConfig(id, serverId || undefined)),
 	);
-	return configs.filter((config): config is NonNullable<typeof config> => config !== null);
+	return configs.filter(
+		(config): config is NonNullable<typeof config> => config !== null,
+	);
 };

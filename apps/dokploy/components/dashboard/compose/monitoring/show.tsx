@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/utils/api";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DockerMonitoring } from "../../monitoring/docker/show";
 
@@ -58,7 +58,9 @@ export const ShowMonitoringCompose = ({
 
 	useEffect(() => {
 		if (router.query.containerId) {
-			const container = data?.find(c => c.containerId === router.query.containerId);
+			const container = data?.find(
+				(c) => c.containerId === router.query.containerId,
+			);
 			if (container) {
 				setContainerAppName(container.name);
 				setContainerId(container.containerId);

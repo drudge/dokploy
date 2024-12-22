@@ -1,4 +1,6 @@
+import { GithubIcon } from "@/components/icons/data-tools-icons";
 import { DateTooltip } from "@/components/shared/date-tooltip";
+import { DialogAction } from "@/components/shared/dialog-action";
 import { StatusTooltip } from "@/components/shared/status-tooltip";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,16 +13,14 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
 import { Pencil, RocketIcon } from "lucide-react";
+import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ShowDeployment } from "../deployments/show-deployment";
-import Link from "next/link";
 import { ShowModalLogs } from "../../settings/web-server/show-modal-logs";
-import { DialogAction } from "@/components/shared/dialog-action";
+import { ShowDeployment } from "../deployments/show-deployment";
 import { AddPreviewDomain } from "./add-preview-domain";
-import { GithubIcon } from "@/components/icons/data-tools-icons";
-import { ShowPreviewSettings } from "./show-preview-settings";
 import { ShowPreviewBuilds } from "./show-preview-builds";
+import { ShowPreviewSettings } from "./show-preview-settings";
 
 interface Props {
 	applicationId: string;

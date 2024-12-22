@@ -133,22 +133,23 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 	);
 
 	// Fetch detailed container info including health checks
-	const { data: containerConfigs = [] } = api.docker.getContainersConfig.useQuery(
-		{
-			appName: compose?.appName || "",
-			appType: compose?.composeType || "docker-compose",
-			serverId: compose?.serverId || undefined,
-			containerIds: containerDetails.map((c) => c.containerId),
-		},
-		{
-			enabled: !!compose?.appName && containerDetails.length > 0,
-			refetchInterval: 5000 as const,
-			retry: 3,
-			onError: (error) => {
-				console.error("Failed to fetch container configs:", error);
+	const { data: containerConfigs = [] } =
+		api.docker.getContainersConfig.useQuery(
+			{
+				appName: compose?.appName || "",
+				appType: compose?.composeType || "docker-compose",
+				serverId: compose?.serverId || undefined,
+				containerIds: containerDetails.map((c) => c.containerId),
 			},
-		},
-	);
+			{
+				enabled: !!compose?.appName && containerDetails.length > 0,
+				refetchInterval: 5000 as const,
+				retry: 3,
+				onError: (error) => {
+					console.error("Failed to fetch container configs:", error);
+				},
+			},
+		);
 
 	// Combine container details with their configs
 	const containers: Container[] = useMemo(() => {
@@ -247,110 +248,117 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 										No services found
 									</TableCell>
 								</TableRow>
-							) : services.map((serviceName: string) => {
-								const container = containers.find((c) =>
-									c.name.includes(serviceName),
-								);
-								return container ? (
-									<TableRow key={container.containerId}>
-										<TableCell className="font-medium">
-											{container.name}
-										</TableCell>
-										<TableCell>
-											<StatusTooltip
-												status={mapContainerStateToStatus(container.state)}
-											/>
-										</TableCell>
-										<TableCell>
-											<StatusTooltip
-												status={
-													container.health?.Status === "healthy"
-														? "running"
-														: container.health?.Status === "unhealthy"
-															? "error"
-															: "idle"
-												}
-											/>
-										</TableCell>
-										<TableCell>
-											{container.startedAt
-												? formatDistanceToNow(new Date(container.startedAt), {
-														addSuffix: true,
-													})
-												: "-"}
-										</TableCell>
-										<TableCell className="text-right">
-											<div className="flex justify-end gap-2">
-												<Button
-													variant="outline"
-													size="sm"
-													onClick={() => {
-														const query = {
-															...router.query,
-															tab: "logs",
-															containerId: container.containerId,
-														};
-														router.push({ query });
-													}}
-												>
-													<FileText className="h-4 w-4 mr-2" />
-													Logs
-												</Button>
-												<Button
-													variant="outline"
-													size="sm"
-													onClick={() => {
-														const query = {
-															...router.query,
-															tab: "monitoring",
-															containerId: container.containerId,
-														};
-														router.push({ query });
-													}}
-												>
-													<ExternalLink className="h-4 w-4 mr-2" />
-													Monitor
-												</Button>
-											</div>
-										</TableCell>
-									</TableRow>
-								) : (
-									<TableRow key={serviceName}>
-										<TableCell className="font-medium">{serviceName}</TableCell>
-										<TableCell>
-											<StatusTooltip status="idle" />
-										</TableCell>
-										<TableCell>-</TableCell>
-										<TableCell>-</TableCell>
-										<TableCell className="text-right">
-											<div className="flex justify-end gap-2">
-												<Button
-													variant="outline"
-													size="sm"
-													onClick={() => {
-														const query = { ...router.query, tab: "logs" };
-														router.push({ query });
-													}}
-												>
-													<FileText className="h-4 w-4 mr-2" />
-													Logs
-												</Button>
-												<Button
-													variant="outline"
-													size="sm"
-													onClick={() => {
-														const query = { ...router.query, tab: "monitoring" };
-														router.push({ query });
-													}}
-												>
-													<ExternalLink className="h-4 w-4 mr-2" />
-													Monitor
-												</Button>
-											</div>
-										</TableCell>
-									</TableRow>
-								);
-							})}
+							) : (
+								services.map((serviceName: string) => {
+									const container = containers.find((c) =>
+										c.name.includes(serviceName),
+									);
+									return container ? (
+										<TableRow key={container.containerId}>
+											<TableCell className="font-medium">
+												{container.name}
+											</TableCell>
+											<TableCell>
+												<StatusTooltip
+													status={mapContainerStateToStatus(container.state)}
+												/>
+											</TableCell>
+											<TableCell>
+												<StatusTooltip
+													status={
+														container.health?.Status === "healthy"
+															? "running"
+															: container.health?.Status === "unhealthy"
+																? "error"
+																: "idle"
+													}
+												/>
+											</TableCell>
+											<TableCell>
+												{container.startedAt
+													? formatDistanceToNow(new Date(container.startedAt), {
+															addSuffix: true,
+														})
+													: "-"}
+											</TableCell>
+											<TableCell className="text-right">
+												<div className="flex justify-end gap-2">
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => {
+															const query = {
+																...router.query,
+																tab: "logs",
+																containerId: container.containerId,
+															};
+															router.push({ query });
+														}}
+													>
+														<FileText className="h-4 w-4 mr-2" />
+														Logs
+													</Button>
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => {
+															const query = {
+																...router.query,
+																tab: "monitoring",
+																containerId: container.containerId,
+															};
+															router.push({ query });
+														}}
+													>
+														<ExternalLink className="h-4 w-4 mr-2" />
+														Monitor
+													</Button>
+												</div>
+											</TableCell>
+										</TableRow>
+									) : (
+										<TableRow key={serviceName}>
+											<TableCell className="font-medium">
+												{serviceName}
+											</TableCell>
+											<TableCell>
+												<StatusTooltip status="idle" />
+											</TableCell>
+											<TableCell>-</TableCell>
+											<TableCell>-</TableCell>
+											<TableCell className="text-right">
+												<div className="flex justify-end gap-2">
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => {
+															const query = { ...router.query, tab: "logs" };
+															router.push({ query });
+														}}
+													>
+														<FileText className="h-4 w-4 mr-2" />
+														Logs
+													</Button>
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => {
+															const query = {
+																...router.query,
+																tab: "monitoring",
+															};
+															router.push({ query });
+														}}
+													>
+														<ExternalLink className="h-4 w-4 mr-2" />
+														Monitor
+													</Button>
+												</div>
+											</TableCell>
+										</TableRow>
+									);
+								})
+							)}
 						</TableBody>
 					</Table>
 				</ScrollArea>

@@ -84,6 +84,8 @@ export const dockerRouter = createTRPCRouter({
 					getConfig(id, input.serverId || undefined),
 				),
 			);
-			return configs.filter((config): config is NonNullable<typeof config> => config !== null);
+			return configs.filter(
+				(config): config is NonNullable<typeof config> => config !== null,
+			);
 		}),
 });
