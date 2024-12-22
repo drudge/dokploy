@@ -170,24 +170,31 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 
 	// Combine container details with their configs
 	// Helper function to find matching container with flexible name matching
-	const findMatchingContainer = (serviceName: string, containers: Container[]) => {
+	const findMatchingContainer = (
+		serviceName: string,
+		containers: Container[],
+	) => {
 		// Try exact match first
 		const exactMatch = containers.find((c) => c.name === serviceName);
 		if (exactMatch) return exactMatch;
 
 		// Try matching service name within container name (for prefixed/suffixed names)
-		const partialMatch = containers.find((c) => 
-			c.name.includes(serviceName) || serviceName.includes(c.name)
+		const partialMatch = containers.find(
+			(c) => c.name.includes(serviceName) || serviceName.includes(c.name),
 		);
-		
+
 		if (partialMatch) {
-			console.log(`Found partial match for service ${serviceName}:`, partialMatch.name);
+			console.log(
+				`Found partial match for service ${serviceName}:`,
+				partialMatch.name,
+			);
 		} else {
-			console.warn(`No container match found for service ${serviceName}. Available containers:`, 
-				containers.map(c => c.name)
+			console.warn(
+				`No container match found for service ${serviceName}. Available containers:`,
+				containers.map((c) => c.name),
 			);
 		}
-		
+
 		return partialMatch;
 	};
 
@@ -208,9 +215,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		}
 
 		return containerDetails.map((detail) => {
-			const config = containerConfigs.find(
-				(c) => c.Id === detail.containerId,
-			);
+			const config = containerConfigs.find((c) => c.Id === detail.containerId);
 
 			const baseContainer: Container = {
 				...detail,
@@ -219,7 +224,9 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			};
 
 			if (!config?.State) {
-				console.warn(`No state found for container ${detail.containerId} (${detail.name})`);
+				console.warn(
+					`No state found for container ${detail.containerId} (${detail.name})`,
+				);
 				return baseContainer;
 			}
 
@@ -228,13 +235,21 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				health: config.State.Health,
 				startedAt: config.State.StartedAt,
 			};
-			
+
+			// Detailed logging for container state and health
 			console.log(`Container ${enrichedContainer.name} details:`, {
 				state: enrichedContainer.state,
 				startedAt: enrichedContainer.startedAt,
-				health: enrichedContainer.health?.Status
+				health: {
+					status: enrichedContainer.health?.Status,
+					failingStreak: enrichedContainer.health?.FailingStreak,
+					logs: enrichedContainer.health?.Log?.length 
+						? enrichedContainer.health.Log[enrichedContainer.health.Log.length - 1]
+						: undefined
+				},
+				rawState: config.State
 			});
-			
+
 			return enrichedContainer;
 		});
 	}, [containerDetails, containerConfigs, compose?.serverId]);
@@ -243,12 +258,12 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 	useEffect(() => {
 		if (router.query.containerId && containers.length > 0) {
 			const container = containers.find(
-				(c) => c.containerId === router.query.containerId
+				(c) => c.containerId === router.query.containerId,
 			);
 			if (!container) {
 				console.warn(
 					`Selected container ${router.query.containerId} not found in available containers:`,
-					containers.map(c => ({ id: c.containerId, name: c.name }))
+					containers.map((c) => ({ id: c.containerId, name: c.name })),
 				);
 			}
 		}
@@ -328,7 +343,10 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 								</TableRow>
 							) : (
 								services.map((serviceName: string) => {
-									const container = findMatchingContainer(serviceName, containers);
+									const container = findMatchingContainer(
+										serviceName,
+										containers,
+									);
 									return container ? (
 										<TableRow key={container.containerId}>
 											<TableCell className="font-medium">
@@ -340,15 +358,19 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 												/>
 											</TableCell>
 											<TableCell>
-												<StatusTooltip
-													status={
-														container.health?.Status === "healthy"
-															? "running"
-															: container.health?.Status === "unhealthy"
-																? "error"
-																: "idle"
-													}
-												/>
+												{container.health?.Status ? (
+													<StatusTooltip
+														status={
+															container.health.Status === "healthy"
+																? "running"
+																: container.health.Status === "unhealthy"
+																	? "error"
+																	: "idle"
+														}
+													/>
+												) : (
+													<StatusTooltip status="idle" />
+												)}
 											</TableCell>
 											<TableCell>
 												{container?.startedAt &&
