@@ -133,6 +133,17 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 	);
 
 	// Fetch detailed container info including health checks
+	// Debug logs for query conditions
+	const queryEnabled = !!compose?.appName && !!compose?.serverId && containerDetails.length > 0;
+	console.log('Container Configs Query Conditions:', {
+		hasAppName: !!compose?.appName,
+		hasServerId: !!compose?.serverId,
+		containerDetailsLength: containerDetails.length,
+		enabled: queryEnabled,
+		serverId: compose?.serverId,
+		containerIds: containerDetails.map((c) => c.containerId),
+	});
+
 	const { data: containerConfigs = [] } =
 		api.docker.getContainersConfig.useQuery(
 			{
@@ -142,10 +153,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				containerIds: containerDetails.map((c) => c.containerId),
 			},
 			{
-				enabled:
-					!!compose?.appName &&
-					!!compose?.serverId &&
-					containerDetails.length > 0,
+				enabled: queryEnabled,
 				refetchInterval: 5000 as const,
 				retry: 3,
 				onError: (error) => {
@@ -157,12 +165,17 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 	// Combine container details with their configs
 	const containers: Container[] = useMemo(() => {
 		if (!compose?.serverId) {
-			console.warn("No serverId available for container configs");
+			console.warn("No serverId available for container configs", { compose });
 			return [];
 		}
 
 		if (!containerDetails || !containerConfigs?.length) {
-			console.warn("No container details or configs available");
+			console.warn("No container details or configs available", {
+				hasContainerDetails: !!containerDetails,
+				containerDetailsLength: containerDetails?.length,
+				hasContainerConfigs: !!containerConfigs,
+				containerConfigsLength: containerConfigs?.length,
+			});
 			return [];
 		}
 
@@ -264,8 +277,8 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 								</TableRow>
 							) : (
 								services.map((serviceName: string) => {
-									const container = containers.find((c) =>
-										c.name === serviceName,
+									const container = containers.find(
+										(c) => c.name === serviceName,
 									);
 									return container ? (
 										<TableRow key={container.containerId}>
