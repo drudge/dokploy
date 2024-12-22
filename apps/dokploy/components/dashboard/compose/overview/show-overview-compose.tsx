@@ -285,7 +285,11 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 													variant="outline"
 													size="sm"
 													onClick={() => {
-														const query = { ...router.query, tab: "logs" };
+														const query = {
+															...router.query,
+															tab: "logs",
+															containerId: container.containerId,
+														};
 														router.push({ query });
 													}}
 												>
@@ -299,6 +303,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 														const query = {
 															...router.query,
 															tab: "monitoring",
+															containerId: container.containerId,
 														};
 														router.push({ query });
 													}}
@@ -334,10 +339,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 													variant="outline"
 													size="sm"
 													onClick={() => {
-														const query = {
-															...router.query,
-															tab: "monitoring",
-														};
+														const query = { ...router.query, tab: "monitoring" };
 														router.push({ query });
 													}}
 												>

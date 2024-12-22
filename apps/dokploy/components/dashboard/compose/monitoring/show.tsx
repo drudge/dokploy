@@ -19,6 +19,7 @@ import {
 import { api } from "@/utils/api";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { DockerMonitoring } from "../../monitoring/docker/show";
 
@@ -53,12 +54,20 @@ export const ShowMonitoringCompose = ({
 	const { mutateAsync: restart, isLoading: isRestarting } =
 		api.docker.restartContainer.useMutation();
 
+	const router = useRouter();
+
 	useEffect(() => {
-		if (data && data?.length > 0) {
+		if (router.query.containerId) {
+			const container = data?.find(c => c.containerId === router.query.containerId);
+			if (container) {
+				setContainerAppName(container.name);
+				setContainerId(container.containerId);
+			}
+		} else if (data && data?.length > 0) {
 			setContainerAppName(data[0]?.name);
 			setContainerId(data[0]?.containerId);
 		}
-	}, [data]);
+	}, [data, router.query.containerId]);
 
 	return (
 		<div>
