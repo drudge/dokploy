@@ -197,24 +197,29 @@ export const getLogType = (message: string): LogStyle => {
 const fancyAnsi = new FancyAnsi();
 
 export function parseAnsi(text: string) {
-	const segments: { text: string; className: string }[] = [];
+	const segments: { text: string; className: string; style?: string }[] = [];
 	const html = fancyAnsi.toHtml(text);
 
 	// Split HTML into segments while preserving ANSI styling
 	const parts = html.split(/(<[^>]+>|<\/[^>]+>)/);
+	let currentStyle = "";
 	let currentClass = "";
 
 	for (const part of parts) {
 		if (part.startsWith("<span")) {
-			// Extract class from span tag
-			const match = part.match(/class="([^"]+)"/);
-			currentClass = match?.[1] ?? "";
+			// Extract style and class from span tag
+			const styleMatch = part.match(/style="([^"]+)"/);
+			const classMatch = part.match(/class="([^"]+)"/);
+			currentStyle = styleMatch?.[1] ?? "";
+			currentClass = classMatch?.[1] ?? "";
 		} else if (part.startsWith("</span>")) {
+			currentStyle = "";
 			currentClass = "";
 		} else if (part.trim()) {
 			segments.push({
 				text: part,
 				className: currentClass,
+				...(currentStyle && { style: currentStyle }),
 			});
 		}
 	}

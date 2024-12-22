@@ -36,7 +36,11 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 		if (!term) {
 			const segments = parseAnsi(text);
 			return segments.map((segment, index) => (
-				<span key={index} className={segment.className || undefined}>
+				<span 
+					key={index} 
+					className={segment.className || undefined}
+					style={segment.style ? { color: `var(${segment.style.match(/var\((.*?)\)/)?.[1]})` } : undefined}
+				>
 					{segment.text}
 				</span>
 			));
@@ -49,7 +53,11 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 				new RegExp(`(${escapeRegExp(term)})`, "gi"),
 			);
 			return (
-				<span key={index} className={segment.className || undefined}>
+				<span 
+					key={index} 
+					className={segment.className || undefined}
+					style={segment.style ? { color: `var(${segment.style.match(/var\((.*?)\)/)?.[1]})` } : undefined}
+				>
 					{parts.map((part, partIndex) =>
 						part.toLowerCase() === term.toLowerCase() ? (
 							<span
