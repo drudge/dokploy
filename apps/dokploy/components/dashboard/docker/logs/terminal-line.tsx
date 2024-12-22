@@ -40,14 +40,25 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 					color: segment.style.color,
 					backgroundColor: segment.style.backgroundColor,
 				};
+				
+				// Escape HTML entities in the text content
+				const escapedText = segment.text
+					.replace(/&/g, "&amp;")
+					.replace(/</g, "&lt;")
+					.replace(/>/g, "&gt;")
+					.replace(/"/g, "&quot;")
+					.replace(/'/g, "&#039;");
+				
 				return (
 					<span
 						key={index}
-						className={segment.className || undefined}
+						className={cn(
+							segment.className,
+							"transition-colors"
+						)}
 						style={style}
-					>
-						{segment.text}
-					</span>
+						dangerouslySetInnerHTML={{ __html: escapedText }}
+					/>
 				);
 			});
 		}
@@ -61,21 +72,31 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 			return (
 				<span
 					key={index}
-					className={segment.className || undefined}
+					className={cn(
+						segment.className,
+						"transition-colors"
+					)}
 					style={segment.style || undefined}
 				>
-					{parts.map((part, partIndex) =>
-						part.toLowerCase() === term.toLowerCase() ? (
+					{parts.map((part, partIndex) => {
+						// Escape HTML entities in each part
+						const escapedPart = part
+							.replace(/&/g, "&amp;")
+							.replace(/</g, "&lt;")
+							.replace(/>/g, "&gt;")
+							.replace(/"/g, "&quot;")
+							.replace(/'/g, "&#039;");
+						
+						return part.toLowerCase() === term.toLowerCase() ? (
 							<span
 								key={partIndex}
 								className="bg-yellow-200/50 dark:bg-yellow-900/50"
-							>
-								{part}
-							</span>
+								dangerouslySetInnerHTML={{ __html: escapedPart }}
+							/>
 						) : (
-							part
-						),
-					)}
+							<span key={partIndex} dangerouslySetInnerHTML={{ __html: escapedPart }} />
+						);
+					})}
 				</span>
 			);
 		});
