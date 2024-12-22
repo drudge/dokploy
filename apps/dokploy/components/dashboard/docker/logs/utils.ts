@@ -197,12 +197,12 @@ export const getLogType = (message: string): LogStyle => {
 const fancyAnsi = new FancyAnsi();
 
 export function parseAnsi(text: string) {
-	const segments: { text: string; className: string; style?: string }[] = [];
+	const segments: { text: string; className: string; style?: { color?: string; backgroundColor?: string } }[] = [];
 	const html = fancyAnsi.toHtml(text);
 
 	// Split HTML into segments while preserving ANSI styling
 	const parts = html.split(/(<[^>]+>|<\/[^>]+>)/);
-	let currentStyle = "";
+	let currentStyle: { color?: string; backgroundColor?: string } | undefined;
 	let currentClass = "";
 
 	for (const part of parts) {
@@ -210,16 +210,25 @@ export function parseAnsi(text: string) {
 			// Extract style and class from span tag
 			const styleMatch = part.match(/style="([^"]+)"/);
 			const classMatch = part.match(/class="([^"]+)"/);
-			currentStyle = styleMatch?.[1] ?? "";
+			
+			currentStyle = {};
+			if (styleMatch?.[1]) {
+				const colorMatch = styleMatch[1].match(/color:\s*(var\([^)]+\))/);
+				const bgColorMatch = styleMatch[1].match(/background-color:\s*(var\([^)]+\))/);
+				
+				if (colorMatch) currentStyle.color = colorMatch[1];
+				if (bgColorMatch) currentStyle.backgroundColor = bgColorMatch[1];
+			}
+			
 			currentClass = classMatch?.[1] ?? "";
 		} else if (part.startsWith("</span>")) {
-			currentStyle = "";
+			currentStyle = undefined;
 			currentClass = "";
 		} else if (part.trim()) {
 			segments.push({
 				text: part,
 				className: currentClass,
-				...(currentStyle && { style: currentStyle }),
+				...(currentStyle && Object.keys(currentStyle).length > 0 && { style: currentStyle }),
 			});
 		}
 	}
