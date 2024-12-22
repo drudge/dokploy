@@ -17,9 +17,14 @@ import { ShowDeploymentCompose } from "./show-deployment-compose";
 
 interface Props {
 	composeId: string;
+	activeDeployment: string | null;
+	onDeploymentChange: (deploymentId: string | null) => void;
 }
-export const ShowDeploymentsCompose = ({ composeId }: Props) => {
-	const [activeLog, setActiveLog] = useState<string | null>(null);
+export const ShowDeploymentsCompose = ({
+	composeId,
+	activeDeployment,
+	onDeploymentChange,
+}: Props) => {
 	const { data } = api.compose.one.useQuery({ composeId });
 	const { data: deployments } = api.deployment.allByCompose.useQuery(
 		{ composeId },
@@ -100,7 +105,7 @@ export const ShowDeploymentsCompose = ({ composeId }: Props) => {
 
 									<Button
 										onClick={() => {
-											setActiveLog(deployment.logPath);
+											onDeploymentChange(deployment.logPath);
 										}}
 									>
 										View
@@ -112,9 +117,9 @@ export const ShowDeploymentsCompose = ({ composeId }: Props) => {
 				)}
 				<ShowDeploymentCompose
 					serverId={data?.serverId || ""}
-					open={activeLog !== null}
-					onClose={() => setActiveLog(null)}
-					logPath={activeLog}
+					open={activeDeployment !== null}
+					onClose={() => onDeploymentChange(null)}
+					logPath={activeDeployment}
 				/>
 			</CardContent>
 		</Card>

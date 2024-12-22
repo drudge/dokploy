@@ -56,12 +56,21 @@ const Service = (
 	const router = useRouter();
 	const { projectId } = router.query;
 	const [tab, setTab] = useState<TabState>(activeTab);
+	const [activeDeployment, setActiveDeployment] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (router.query.tab) {
 			setTab(router.query.tab as TabState);
 		}
 	}, [router.query.tab]);
+
+	useEffect(() => {
+		if (router.query.deploymentId) {
+			setActiveDeployment(router.query.deploymentId as string);
+		} else {
+			setActiveDeployment(null);
+		}
+	}, [router.query.deploymentId]);
 
 	const { data } = api.compose.one.useQuery(
 		{ composeId },
@@ -261,7 +270,23 @@ const Service = (
 
 					<TabsContent value="deployments">
 						<div className="flex flex-col gap-4 pt-2.5">
-							<ShowDeploymentsCompose composeId={composeId} />
+							<ShowDeploymentsCompose
+								composeId={composeId}
+								activeDeployment={activeDeployment}
+								onDeploymentChange={(deploymentId) => {
+									const newQuery = { ...router.query };
+									if (deploymentId) {
+										newQuery.deploymentId = deploymentId;
+									} else {
+										newQuery.deploymentId = undefined;
+									}
+									router.push(
+										{ pathname: router.pathname, query: newQuery },
+										undefined,
+										{ shallow: true },
+									);
+								}}
+							/>
 						</div>
 					</TabsContent>
 
