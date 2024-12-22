@@ -265,7 +265,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 							) : (
 								services.map((serviceName: string) => {
 									const container = containers.find((c) =>
-										c.name.includes(serviceName),
+										c.name === serviceName,
 									);
 									return container ? (
 										<TableRow key={container.containerId}>
@@ -347,7 +347,11 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 														variant="outline"
 														size="sm"
 														onClick={() => {
-															const query = { ...router.query, tab: "logs" };
+															const query = {
+																...router.query,
+																tab: "logs",
+																containerId: undefined, // Explicitly clear containerId when no container exists
+															};
 															router.push({ query });
 														}}
 													>
@@ -361,6 +365,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 															const query = {
 																...router.query,
 																tab: "monitoring",
+																containerId: undefined, // Explicitly clear containerId when no container exists
 															};
 															router.push({ query });
 														}}
