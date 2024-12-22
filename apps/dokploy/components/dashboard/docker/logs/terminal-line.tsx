@@ -54,7 +54,7 @@ export function TerminalLine({ log, noTimestamp, searchTerm }: LogLineProps) {
 						part.toLowerCase() === term.toLowerCase() ? (
 							<span
 								key={partIndex}
-								className="bg-yellow-200 dark:bg-yellow-900"
+								className="bg-yellow-200/50 dark:bg-yellow-900/50"
 							>
 								{part}
 							</span>

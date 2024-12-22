@@ -1,3 +1,5 @@
+import { FancyAnsi } from 'fancy-ansi';
+
 export type LogType = "error" | "warning" | "success" | "info" | "debug";
 export type LogVariant = "red" | "yellow" | "green" | "blue" | "orange";
 
@@ -192,55 +194,30 @@ export const getLogType = (message: string): LogStyle => {
 	return LOG_STYLES.info;
 };
 
+const fancyAnsi = new FancyAnsi();
+
 export function parseAnsi(text: string) {
 	const segments: { text: string; className: string }[] = [];
-	let currentIndex = 0;
-	let currentClasses: string[] = [];
-
-	while (currentIndex < text.length) {
-		const escStart = text.indexOf("\x1b[", currentIndex);
-
-		// No more escape sequences found
-		if (escStart === -1) {
-			if (currentIndex < text.length) {
-				segments.push({
-					text: text.slice(currentIndex),
-					className: currentClasses.join(" "),
-				});
-			}
-			break;
-		}
-
-		// Add text before escape sequence
-		if (escStart > currentIndex) {
+	const html = fancyAnsi.toHtml(text);
+	
+	// Split HTML into segments while preserving ANSI styling
+	const parts = html.split(/(<[^>]+>|<\/[^>]+>)/);
+	let currentClass = '';
+	
+	for (const part of parts) {
+		if (part.startsWith('<span')) {
+			// Extract class from span tag
+			const match = part.match(/class="([^"]+)"/);
+			currentClass = match?.[1] ?? '';
+		} else if (part.startsWith('</span>')) {
+			currentClass = '';
+		} else if (part.trim()) {
 			segments.push({
-				text: text.slice(currentIndex, escStart),
-				className: currentClasses.join(" "),
+				text: part,
+				className: currentClass
 			});
 		}
-
-		const escEnd = text.indexOf("m", escStart);
-		if (escEnd === -1) break;
-
-		// Handle multiple codes in one sequence (e.g., \x1b[1;31m)
-		const codesStr = text.slice(escStart + 2, escEnd);
-		const codes = codesStr.split(";").map((c) => Number.parseInt(c, 10));
-
-		if (codes.includes(0)) {
-			// Reset all formatting
-			currentClasses = [];
-		} else {
-			// Add new classes for each code
-			for (const code of codes) {
-				const className = ansiToTailwind[code];
-				if (className && !currentClasses.includes(className)) {
-					currentClasses.push(className);
-				}
-			}
-		}
-
-		currentIndex = escEnd + 1;
 	}
-
+	
 	return segments;
 }
