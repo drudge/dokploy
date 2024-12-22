@@ -46,18 +46,18 @@ import {
 	createDeploymentPreview,
 	updateDeploymentStatus,
 } from "./deployment";
-import { validUniqueServerAppName } from "./project";
-import {
-	findPreviewDeploymentById,
-	updatePreviewDeployment,
-} from "./preview-deployment";
+import { type Domain, getDomainHost } from "./domain";
 import {
 	createPreviewDeploymentComment,
 	getIssueComment,
 	issueCommentExists,
 	updateIssueComment,
 } from "./github";
-import { type Domain, getDomainHost } from "./domain";
+import {
+	findPreviewDeploymentById,
+	updatePreviewDeployment,
+} from "./preview-deployment";
+import { validUniqueServerAppName } from "./project";
 export type Application = typeof applications.$inferSelect;
 
 export const createApplication = async (
@@ -176,12 +176,12 @@ export const deployApplication = async ({
 	descriptionLog: string;
 }) => {
 	const application = await findApplicationById(applicationId);
-	const buildLink = `${await getDokployUrl()}/dashboard/project/${application.projectId}/services/application/${application.applicationId}?tab=deployments`;
 	const deployment = await createDeployment({
 		applicationId: applicationId,
 		title: titleLog,
 		description: descriptionLog,
 	});
+	const buildLink = `${await getDokployUrl()}/dashboard/project/${application.projectId}/services/application/${application.applicationId}/deployments/${deployment.deploymentId}`;
 
 	try {
 		if (application.sourceType === "github") {
@@ -285,12 +285,12 @@ export const deployRemoteApplication = async ({
 	descriptionLog: string;
 }) => {
 	const application = await findApplicationById(applicationId);
-	const buildLink = `${await getDokployUrl()}/dashboard/project/${application.projectId}/services/application/${application.applicationId}?tab=deployments`;
 	const deployment = await createDeployment({
 		applicationId: applicationId,
 		title: titleLog,
 		description: descriptionLog,
 	});
+	const buildLink = `${await getDokployUrl()}/dashboard/project/${application.projectId}/services/application/${application.applicationId}/deployments/${deployment.deploymentId}`;
 
 	try {
 		if (application.serverId) {
