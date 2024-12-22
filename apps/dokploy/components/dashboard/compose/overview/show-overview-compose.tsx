@@ -142,7 +142,10 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				containerIds: containerDetails.map((c) => c.containerId),
 			},
 			{
-				enabled: !!compose?.appName && !!compose?.serverId && containerDetails.length > 0,
+				enabled:
+					!!compose?.appName &&
+					!!compose?.serverId &&
+					containerDetails.length > 0,
 				refetchInterval: 5000 as const,
 				retry: 3,
 				onError: (error) => {
@@ -175,9 +178,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			};
 
 			if (!config?.State) {
-				console.warn(
-					`No state found for container ${container.containerId}`,
-				);
+				console.warn(`No state found for container ${container.containerId}`);
 				return baseContainer;
 			}
 
@@ -288,7 +289,8 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 												/>
 											</TableCell>
 											<TableCell>
-												{container?.startedAt && container.state.toLowerCase() === "running"
+												{container?.startedAt &&
+												container.state.toLowerCase() === "running"
 													? formatDistanceToNow(new Date(container.startedAt), {
 															addSuffix: true,
 														})
