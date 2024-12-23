@@ -152,7 +152,10 @@ export const ShowOverviewCompose = ({
 			appName,
 			appType,
 			serverId,
-			containerIds: containerDetails?.filter((c): c is NonNullable<typeof c> => !!c?.containerId).map((c) => c.containerId) || [],
+			containerIds:
+				containerDetails
+					?.filter((c): c is NonNullable<typeof c> => !!c?.containerId)
+					.map((c) => c.containerId) || [],
 		},
 		{
 			enabled: !!composeId && !!serverId && !!appName,
