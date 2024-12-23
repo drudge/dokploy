@@ -156,23 +156,48 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 	);
 	// Simplified query enabling - remove dependency on containerDetails.length
 	// Simplified query enabling logic to match monitoring tab pattern
-	const { data: containerConfigs = [] } =
-		api.docker.getContainersConfig.useQuery(
-			{
-				appName: compose?.appName || "",
-				appType: compose?.composeType || "docker-compose",
-				serverId: serverId || "",
-				containerIds: containerDetails?.map((c) => c.containerId) || [],
+	// Enhanced container config query with better error handling and validation
+	const {
+		data: containerConfigs = [],
+		error: containerConfigError,
+		isLoading: isLoadingConfigs,
+	} = api.docker.getContainersConfig.useQuery(
+		{
+			appName: compose?.appName || "",
+			appType: compose?.composeType || "docker-compose",
+			serverId: typeof serverId === "string" ? serverId : "",
+			containerIds: containerDetails?.map((c) => c.containerId) || [],
+		},
+		{
+			enabled:
+				!!composeId &&
+				typeof serverId === "string" &&
+				!!compose?.appName &&
+				(containerDetails?.length ?? 0) > 0,
+			refetchInterval: 5000 as const,
+			retry: 3,
+			onError: (error) => {
+				console.error("Failed to fetch container configs:", error, {
+					composeId,
+					serverId,
+					appName: compose?.appName,
+					containerCount: containerDetails?.length,
+				});
 			},
-			{
-				enabled: !!composeId && !!serverId,
-				refetchInterval: 5000 as const,
-				retry: 3,
-				onError: (error) => {
-					console.error("Failed to fetch container configs:", error);
-				},
+			onSuccess: (data) => {
+				console.debug("Successfully fetched container configs:", {
+					configCount: data.length,
+					containers: data.map((config) => ({
+						id: config.Id,
+						name: config.Name,
+						state: config.State?.Status,
+						health: config.State?.Health?.Status,
+						startedAt: config.State?.StartedAt,
+					})),
+				});
 			},
-		);
+		},
+	);
 
 	// Combine container details with their configs
 	// Helper function to find matching container with flexible name matching
@@ -238,13 +263,23 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 					health: config?.State?.Health?.Status,
 				});
 
-				return {
+				// Enhanced container data with strict validation
+				const enrichedContainer = {
 					name: detail.name,
 					containerId: detail.containerId,
 					state: detail.state,
-					health: config?.State?.Health,
-					startedAt: config?.State?.StartedAt,
+					health: config?.State?.Health ?? undefined,
+					startedAt: config?.State?.StartedAt ?? undefined,
 				};
+
+				// Log container enrichment for debugging
+				console.debug(`Enriched container ${detail.name}:`, {
+					...enrichedContainer,
+					hasHealth: !!enrichedContainer.health,
+					hasStartedAt: !!enrichedContainer.startedAt,
+				});
+
+				return enrichedContainer;
 			});
 	}, [containerDetails, containerConfigs]);
 
@@ -314,45 +349,72 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		state: DockerContainerState | string,
 		health?: ContainerHealth,
 	): "idle" | "error" | "done" | "running" => {
-		// Log input state for debugging
+		// Enhanced logging for state mapping with full context
 		console.debug("Mapping container state to status:", {
 			state,
 			healthStatus: health?.Status,
 			healthFailingStreak: health?.FailingStreak,
 			hasHealthLogs: !!health?.Log?.length,
+			rawHealth: health,
+			rawState: state,
 		});
 
-		// Prioritize health status if available
+		// Normalize and validate state with better error handling
+		const normalizedState = (state || "").toLowerCase().trim();
+		
+		if (!normalizedState) {
+			console.warn("Empty or invalid container state received", {
+				originalState: state,
+				health,
+			});
+			return "error";
+		}
+
+		// Prioritize health status with enhanced validation
 		if (health?.Status) {
 			const healthStatus = health.Status.toLowerCase();
+			const failingStreak = health.FailingStreak ?? 0;
+			const hasLogs = (health.Log?.length ?? 0) > 0;
+
+			console.debug("Processing health status:", {
+				status: healthStatus,
+				failingStreak,
+				hasLogs,
+				logCount: health.Log?.length,
+				lastLog: hasLogs ? health.Log?.[0] : undefined,
+			});
+
+			// Enhanced health status mapping
 			switch (healthStatus) {
 				case "healthy":
 					return "running";
 				case "unhealthy":
-					return "error";
+					// Consider failing streak for status
+					return failingStreak > 3 ? "error" : "idle";
 				case "starting":
 					return "idle";
+				case "none":
+					// Fall through to container state check
+					console.debug("Health status 'none', checking container state");
+					break;
 				default:
 					console.warn(`Unknown health status: ${healthStatus}`, {
-						failingStreak: health.FailingStreak,
-						logEntries: health.Log?.length,
+						failingStreak,
+						logCount: health.Log?.length,
+						lastLog: hasLogs ? health.Log?.[0] : undefined,
 					});
-				// Fall through to container state check
+					// Fall through to container state check
 			}
+		} else {
+			console.debug("No health status available, using container state", {
+				normalizedState,
+			});
 		}
 
-		// Normalize and validate container state
-		const normalizedState = state.toLowerCase().trim();
-		if (!normalizedState) {
-			console.warn("Empty container state received");
-			return "error";
-		}
-
-		// Map container state with detailed logging
-		const containerState = normalizedState as DockerContainerState;
+		// Enhanced state mapping with validation and detailed logging
 		let status: "idle" | "error" | "done" | "running";
 
-		switch (containerState) {
+		switch (normalizedState as DockerContainerState) {
 			case "running":
 				status = "running";
 				break;
@@ -360,24 +422,35 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				status = "error";
 				break;
 			case "created":
+				status = "idle"; // New container, not yet started
+				break;
 			case "paused":
-				status = "idle";
+				status = "idle"; // Container is paused but can be resumed
 				break;
 			case "restarting":
-				status = "running";
+				status = "idle"; // Changed from running to idle during restart
 				break;
 			case "removing":
+				status = "error"; // Container is being removed
+				break;
 			case "dead":
-				status = "error";
+				status = "error"; // Container is in a dead state
 				break;
 			default:
-				console.warn(`Unknown container state: ${containerState}`);
-				status = "idle";
+				console.warn(`Unknown container state: ${normalizedState}`, {
+					originalState: state,
+					health,
+				});
+				status = "error"; // Unknown states treated as errors
 		}
 
-		console.debug("Mapped container state:", {
+		// Enhanced debug logging with full context
+		console.debug("Final status mapping:", {
 			originalState: state,
 			normalizedState,
+			healthStatus: health?.Status,
+			healthFailingStreak: health?.FailingStreak,
+			hasHealthLogs: !!health?.Log?.length,
 			resultStatus: status,
 		});
 
@@ -509,17 +582,22 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 											</TableCell>
 											<TableCell>
 												{(() => {
-													// Safely access and normalize health status
+													// Enhanced health status processing with validation
 													const healthStatus =
 														container.health?.Status?.toLowerCase() ?? null;
 													const hasHealth = !!container.health?.Status;
+													const failingStreak = container.health?.FailingStreak ?? 0;
+													const healthLogs = container.health?.Log ?? [];
 
 													console.debug(
 														`Health status for ${container.name}:`,
 														{
 															status: healthStatus,
 															hasHealth,
-															failingStreak: container.health?.FailingStreak,
+															failingStreak,
+															logCount: healthLogs.length,
+															rawHealth: container.health, // Log full health object
+															containerState: container.state,
 														},
 													);
 
@@ -551,44 +629,74 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 											<TableCell>
 												{(() => {
 													try {
+														// Enhanced uptime calculation with better validation
 														if (!container?.startedAt) {
 															console.debug(
-																`No startedAt for container ${container.name}`,
+																`No startedAt for container ${container.name}:`,
+																{
+																	container,
+																	state: container.state,
+																	health: container.health?.Status,
+																},
 															);
 															return "-";
 														}
 
-														// Parse and validate the date
+														// Parse and validate the date with timezone handling
 														const startDate = new Date(container.startedAt);
 														if (Number.isNaN(startDate.getTime())) {
 															console.warn(
 																`Invalid startedAt date for ${container.name}:`,
-																container.startedAt,
+																{
+																	startedAt: container.startedAt,
+																	container,
+																},
 															);
 															return "-";
 														}
 
-														// Ensure date is not in the future
-														if (startDate > new Date()) {
+														// Enhanced date validation with detailed logging
+														const now = new Date();
+														if (startDate > now) {
 															console.warn(
 																`Future startedAt date for ${container.name}:`,
-																container.startedAt,
+																{
+																	startedAt: container.startedAt,
+																	now: now.toISOString(),
+																	diff: startDate.getTime() - now.getTime(),
+																	container,
+																},
 															);
 															return "-";
 														}
 
+														// Calculate uptime with more precise options
 														const uptime = formatDistanceToNow(startDate, {
 															addSuffix: true,
+															includeSeconds: true,
 														});
+
+														// Enhanced debug logging
 														console.debug(`Uptime for ${container.name}:`, {
 															startedAt: container.startedAt,
+															parsedStartDate: startDate.toISOString(),
 															uptime,
+															now: now.toISOString(),
+															container: {
+																state: container.state,
+																health: container.health?.Status,
+															},
 														});
+
 														return uptime;
 													} catch (error) {
 														console.error(
 															`Error formatting uptime for ${container.name}:`,
-															error,
+															{
+																error,
+																container,
+																startedAt: container.startedAt,
+															},
 														);
 														return "-";
 													}
@@ -614,7 +722,19 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 																tab: "logs",
 																containerId: container.containerId,
 															};
-															console.debug("Routing to logs:", query);
+															console.debug("Routing to logs:", {
+																query,
+																container: {
+																	name: container.name,
+																	state: container.state,
+																	health: container.health?.Status,
+																	uptime: container.startedAt
+																		? formatDistanceToNow(new Date(container.startedAt), {
+																				addSuffix: true,
+																		  })
+																		: undefined,
+																},
+															});
 															void router.push(
 																{
 																	pathname: router.pathname,
@@ -646,7 +766,19 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 																tab: "monitoring",
 																containerId: container.containerId,
 															};
-															console.debug("Routing to monitoring:", query);
+															console.debug("Routing to monitoring:", {
+																query,
+																container: {
+																	name: container.name,
+																	state: container.state,
+																	health: container.health?.Status,
+																	uptime: container.startedAt
+																		? formatDistanceToNow(new Date(container.startedAt), {
+																				addSuffix: true,
+																		  })
+																		: undefined,
+																},
+															});
 															void router.push(
 																{
 																	pathname: router.pathname,
