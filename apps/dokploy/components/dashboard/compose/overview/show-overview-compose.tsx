@@ -90,28 +90,53 @@ import type React from "react";
 import { memo } from "react";
 
 // Separate components for better organization and hook consistency
-const HealthStatusBadge = memo(({ container }: { container: Container }) => {
-	const { variant, className, label, tooltip } = useMemo(() => {
+interface HealthStatusProps {
+	health: ContainerHealth | undefined;
+	name: string;
+	state: string;
+}
+
+const HealthStatusBadge = memo(({ health, name, state }: HealthStatusProps): JSX.Element => {
+	type BadgeVariant =
+		| "default"
+		| "destructive"
+		| "secondary"
+		| "red"
+		| "yellow"
+		| "orange"
+		| "green"
+		| "blue"
+		| "blank"
+		| "outline";
+
+	interface BadgeInfo {
+		variant: BadgeVariant;
+		className: string | undefined;
+		label: string;
+		tooltip: string;
+	}
+
+	const badgeInfo = useMemo((): BadgeInfo => {
 		// Enhanced health status processing with validation
-		const healthStatus = container.health?.Status?.toLowerCase() ?? null;
-		const hasHealth = !!container.health?.Status;
-		const failingStreak = container.health?.FailingStreak ?? 0;
-		const healthLogs = container.health?.Log ?? [];
+		const healthStatus = health?.Status?.toLowerCase() ?? null;
+		const hasHealth = !!health?.Status;
+		const failingStreak = health?.FailingStreak ?? 0;
+		const healthLogs = health?.Log ?? [];
 		const lastLog = healthLogs[0];
 
-		console.debug(`Health status for ${container.name}:`, {
+		console.debug(`Health status for ${name}:`, {
 			status: healthStatus,
 			hasHealth,
 			failingStreak,
 			logCount: healthLogs.length,
-			rawHealth: container.health,
-			containerState: container.state,
+			rawHealth: health,
+			containerState: state,
 		});
 
 		// Build detailed tooltip information
-		const tooltipParts = [];
+		const tooltipParts: string[] = [];
 		if (hasHealth) {
-			tooltipParts.push(`Status: ${container.health?.Status}`);
+			tooltipParts.push(`Status: ${health?.Status}`);
 			if (failingStreak > 0) {
 				tooltipParts.push(`Failing Streak: ${failingStreak}`);
 			}
@@ -139,28 +164,39 @@ const HealthStatusBadge = memo(({ container }: { container: Container }) => {
 			| "blank"
 			| "outline" = "secondary";
 		let className: string | undefined;
-		let label = hasHealth ? container.health?.Status : "No health check";
+		// Initialize displayLabel with a default value
+		let displayLabel: string = "No health check";
+		let currentVariant: BadgeVariant = "secondary";
+		let currentClassName: string | undefined = undefined;
 
-		if (healthStatus === "healthy") {
-			variant = "green";
-			className = undefined; // Using predefined green variant styles
-		} else if (healthStatus === "unhealthy") {
-			variant = "red";
-			if (failingStreak > 0) {
-				label = `Unhealthy (${failingStreak} fails)`;
+		if (hasHealth && health?.Status) {
+			displayLabel = health.Status;
+
+			if (healthStatus === "healthy") {
+				currentVariant = "green";
+			} else if (healthStatus === "unhealthy") {
+				currentVariant = "red";
+				if (failingStreak > 0) {
+					displayLabel = `Unhealthy (${failingStreak} fails)`;
+				}
+			} else if (healthStatus === "starting") {
+				currentVariant = "yellow";
+				displayLabel = "Starting";
 			}
-		} else if (healthStatus === "starting") {
-			variant = "yellow";
-			label = "Starting";
 		}
 
-		return {
-			variant,
-			className,
-			label,
+		// Ensure all returned values are properly typed
+		const result: BadgeInfo = {
+			variant: currentVariant,
+			className: currentClassName,
+			label: displayLabel,
 			tooltip: tooltipParts.join("\n"),
 		};
-	}, [container]);
+
+		return result;
+	}, [health, name, state]);
+
+	const { variant, className, label, tooltip } = badgeInfo;
 
 	return (
 		<Badge variant={variant} className={className} title={tooltip}>
@@ -169,36 +205,44 @@ const HealthStatusBadge = memo(({ container }: { container: Container }) => {
 	);
 });
 
-const UptimeDisplay = memo(({ container }: { container: Container }) => {
-	const { uptime, tooltip } = useMemo(() => {
+interface UptimeDisplayProps {
+	startedAt: string | undefined;
+	name: string;
+	state: string;
+	health: ContainerHealth | undefined;
+}
+
+const UptimeDisplay = memo(({ startedAt, name, state, health }: UptimeDisplayProps) => {
+	const { displayText, tooltip } = useMemo(() => {
 		try {
-			if (!container?.startedAt) {
-				console.debug(`No startedAt for container ${container.name}:`, {
-					container,
-					state: container.state,
-					health: container.health?.Status,
+			if (!startedAt) {
+				console.debug(`No startedAt for container ${name}:`, {
+					state,
+					health: health?.Status,
 				});
-				return { uptime: "-", tooltip: "No start time available" };
+				return { displayText: "-", tooltip: "No start time available" };
 			}
 
-			const startDate = new Date(container.startedAt);
+			const startDate = new Date(startedAt);
 			if (Number.isNaN(startDate.getTime())) {
-				console.warn(`Invalid startedAt date for ${container.name}:`, {
-					startedAt: container.startedAt,
-					container,
+				console.warn(`Invalid startedAt date for ${name}:`, {
+					startedAt,
+					state,
+					health: health?.Status,
 				});
-				return { uptime: "-", tooltip: "Invalid start time" };
+				return { displayText: "-", tooltip: "Invalid start time" };
 			}
 
 			const now = new Date();
 			if (startDate > now) {
-				console.warn(`Future startedAt date for ${container.name}:`, {
-					startedAt: container.startedAt,
+				console.warn(`Future startedAt date for ${name}:`, {
+					startedAt,
 					now: now.toISOString(),
 					diff: startDate.getTime() - now.getTime(),
-					container,
+					state,
+					health: health?.Status,
 				});
-				return { uptime: "-", tooltip: "Invalid future start time" };
+				return { displayText: "-", tooltip: "Invalid future start time" };
 			}
 
 			const formattedUptime = formatDistanceToNow(startDate, {
@@ -207,44 +251,47 @@ const UptimeDisplay = memo(({ container }: { container: Container }) => {
 			});
 
 			// Enhanced state-aware uptime display
-			const state = container.state?.toLowerCase();
-			const isRunning = state === "running";
+			const normalizedState = state?.toLowerCase();
+			const isRunning = normalizedState === "running";
 			const displayUptime = isRunning
 				? formattedUptime
-				: `${state?.charAt(0).toUpperCase()}${state?.slice(1)} ${formattedUptime}`;
+				: `${normalizedState?.charAt(0).toUpperCase()}${normalizedState?.slice(1)} ${formattedUptime}`;
 
 			const tooltipInfo = [
 				`Started: ${startDate.toLocaleString()}`,
 				`State: ${state}`,
-				container.health?.Status
-					? `Health: ${container.health.Status}`
+				health?.Status
+					? `Health: ${health.Status}`
 					: "No health check",
 			].join("\n");
 
-			console.debug(`Uptime for ${container.name}:`, {
-				startedAt: container.startedAt,
+			console.debug(`Uptime for ${name}:`, {
+				startedAt,
 				parsedStartDate: startDate.toISOString(),
 				uptime: formattedUptime,
 				displayUptime,
 				now: now.toISOString(),
-				container: {
-					state: container.state,
-					health: container.health?.Status,
-				},
+				state,
+				health: health?.Status,
 			});
 
-			return { uptime: displayUptime, tooltip: tooltipInfo };
+			return { displayText: displayUptime, tooltip: tooltipInfo };
 		} catch (error) {
-			console.error(`Error formatting uptime for ${container.name}:`, {
+			console.error(`Error formatting uptime for ${name}:`, {
 				error,
-				container,
-				startedAt: container.startedAt,
+				startedAt,
+				state,
+				health: health?.Status,
 			});
-			return { uptime: "-", tooltip: "Error calculating uptime" };
+			return { displayText: "-", tooltip: "Error calculating uptime" };
 		}
-	}, [container]);
+	}, [startedAt, name, state, health]);
 
-	return <span title={tooltip}>{uptime}</span>;
+	return (
+		<div className="text-sm text-muted-foreground" title={tooltip}>
+			{displayText}
+		</div>
+	);
 });
 
 export const ShowOverviewCompose = ({
@@ -259,6 +306,188 @@ export const ShowOverviewCompose = ({
 			? router.query.projectId
 			: undefined;
 
+	// Simplified services query with better error handling
+	// Use consistent hook placement and proper typing
+	const { data: services = [], isLoading: isLoadingServices } =
+		api.compose.loadServices.useQuery(
+			{
+				composeId,
+				type: "fetch",
+			},
+			{
+				enabled: !!serverId && serverId !== "null" && !!composeId,
+				refetchInterval: 5000,
+				retry: 3,
+				onError(error) {
+					console.error("Failed to fetch services:", error);
+				},
+			},
+		);
+
+	// Query container details with real-time updates
+	// Using props directly for better type safety
+	// Enhanced container details query with better error handling and validation
+	const {
+		data: containerDetails = [],
+		isLoading: isLoadingContainers,
+		error: containerError,
+	} = api.docker.getContainersByAppNameMatch.useQuery(
+		{
+			appName,
+			appType,
+			serverId: serverId || "",
+		},
+		{
+			enabled: Boolean(serverId) && serverId !== "null" && Boolean(appName) && Boolean(composeId),
+			refetchInterval: 5000,
+			retry: 3,
+			onError(error) {
+				console.error("Failed to fetch container details:", error, {
+					serverId,
+					appName,
+					composeId,
+				});
+			},
+			onSuccess(data) {
+				console.debug("Successfully fetched container details:", {
+					containerCount: data.length,
+					containers: data.map(c => ({
+						name: c.name,
+						id: c.containerId,
+						state: c.state
+					})),
+					query: {
+						serverId,
+						appName,
+						appType
+					}
+				});
+			},
+		},
+	);
+
+	// Move containerIds calculation before its usage
+	const containerIds = useMemo(() => {
+		return (
+			containerDetails
+				?.filter(
+					(
+						c: RouterOutputs["docker"]["getContainersByAppNameMatch"][number],
+					): c is NonNullable<typeof c> => !!c?.containerId,
+				)
+				.map(
+					(c: RouterOutputs["docker"]["getContainersByAppNameMatch"][number]) =>
+						c.containerId,
+				) || []
+		);
+	}, [containerDetails]);
+
+	// Enhanced container configs query with better dependency handling
+	const {
+		data: containerConfigs = [],
+		error: containerConfigError,
+		isLoading: isLoadingConfigs,
+	} = api.docker.getContainersConfig.useQuery(
+		{
+			appName,
+			appType,
+			serverId: serverId || "",
+			containerIds,
+		},
+		{
+			enabled: Boolean(serverId) && 
+				serverId !== "null" && 
+				Boolean(appName) && 
+				Boolean(composeId) && 
+				containerIds.length > 0,
+			refetchInterval: 5000,
+			retry: 3,
+			onError(error) {
+				console.error("Failed to fetch container configs:", error, {
+					composeId,
+					serverId,
+					appName,
+					containerCount: containerIds.length,
+					query: {
+						serverId,
+						appName,
+						appType,
+						containerIds
+					}
+				});
+			},
+			onSuccess(data) {
+				console.debug("Successfully fetched container configs:", {
+					configCount: data.length,
+					containers: data.map((config) => ({
+						id: config.Id,
+						name: config.Name,
+						state: config.State?.Status,
+						health: config.State?.Health?.Status,
+						startedAt: config.State?.StartedAt,
+					})),
+					query: {
+						serverId,
+						appName,
+						appType,
+						containerIds
+					}
+				});
+			},
+		},
+	);
+
+	// Move enrichedContainers calculation before its usage
+	const enrichedContainers = useMemo((): Container[] => {
+		console.debug("Starting container enrichment", {
+			containerDetailsCount: containerDetails?.length,
+			containerConfigsCount: containerConfigs?.length,
+			loadingStates: {
+				services: isLoadingServices,
+				containers: isLoadingContainers,
+				configs: isLoadingConfigs,
+			},
+		});
+
+		if (isLoadingServices || isLoadingContainers || isLoadingConfigs) {
+			return [];
+		}
+
+		const containers = containerDetails
+			.map((detail) => {
+				const config = containerConfigs?.find((c) => c.Id === detail.containerId);
+
+				const enrichedContainer = {
+					name: detail.name,
+					containerId: detail.containerId,
+					state: detail.state,
+					health: config?.State?.Health
+						? {
+								Status: config.State.Health.Status,
+								FailingStreak: config.State.Health.FailingStreak,
+								Log: config.State.Health.Log,
+						  }
+						: undefined,
+					startedAt: config?.State?.StartedAt
+						? new Date(config.State.StartedAt).toISOString()
+						: undefined,
+				};
+
+				return enrichedContainer;
+			})
+			.filter((container): container is Container => {
+				const validation = {
+					hasName: !!container.name,
+					hasId: !!container.containerId,
+					hasState: !!container.state,
+				};
+
+				return validation.hasName && validation.hasId && validation.hasState;
+			});
+
+		return containers;
+	}, [containerDetails, containerConfigs, isLoadingServices, isLoadingContainers, isLoadingConfigs]);
+
 	const [containerAppName, setContainerAppName] = useState<string>();
 	const [containerId, setContainerId] = useState<string>();
 
@@ -270,17 +499,19 @@ export const ShowOverviewCompose = ({
 	}, [projectId]);
 
 	// Container selection handler with consistent hook usage
-	// Handle container selection in overview tab
 	const handleContainerSelect = useCallback(
-		(container: Container) => {
+		(value: string) => {
+			console.debug("Container selection changed:", { value });
+			const container = enrichedContainers.find((c) => c.name === value);
+			
 			if (!container?.containerId || !container?.name) {
-				console.warn("Invalid container selected:", container);
+				console.warn("Invalid container selected:", { value, container });
 				return;
 			}
 
-			console.debug("Selecting container:", {
-				containerId: container.containerId,
+			console.debug("Found matching container:", {
 				name: container.name,
+				containerId: container.containerId,
 				state: container.state,
 			});
 
@@ -288,20 +519,23 @@ export const ShowOverviewCompose = ({
 			setContainerAppName(container.name);
 			setContainerId(container.containerId);
 
-			// Update URL with selected container ID
+			// Update URL with selected container ID and preserve all query parameters
 			void router.push(
 				{
 					pathname: router.pathname,
 					query: {
 						...router.query,
 						containerId: container.containerId,
+						serverId,
+						appName,
+						appType,
 					},
 				},
 				undefined,
 				{ shallow: true },
 			);
 		},
-		[router],
+		[router, enrichedContainers, serverId, appName, appType],
 	);
 
 	// Handle navigation to logs view
@@ -328,10 +562,13 @@ export const ShowOverviewCompose = ({
 				query: {
 					...router.query,
 					containerId: container.containerId,
+					serverId,
+					appName,
+					appType,
 				},
 			});
 		},
-		[router, projectId, composeId],
+		[router, projectId, composeId, serverId, appName, appType],
 	);
 
 	// Handle navigation to monitoring view
@@ -358,112 +595,16 @@ export const ShowOverviewCompose = ({
 				query: {
 					...router.query,
 					containerId: container.containerId,
+					serverId,
+					appName,
+					appType,
 				},
 			});
 		},
-		[router, projectId, composeId],
+		[router, projectId, composeId, serverId, appName, appType],
 	);
 
-	// Simplified services query with better error handling
-	// Use consistent hook placement and proper typing
-	const { data: services = [], isLoading: isLoadingServices } =
-		api.compose.loadServices.useQuery(
-			{
-				composeId,
-				type: "fetch",
-				serverId: serverId || "",
-			},
-			{
-				enabled: !!serverId && serverId !== "null" && !!composeId,
-				refetchInterval: 5000,
-				retry: 3,
-				onError(error) {
-					console.error("Failed to fetch services:", error);
-				},
-			},
-		);
-
-	// Query container details with real-time updates
-	// Using props directly for better type safety
-	const {
-		data: containerDetails = [],
-		isLoading: isLoadingContainers,
-		error: containerError,
-	} = api.docker.getContainersByAppNameMatch.useQuery(
-		{
-			appName,
-			appType,
-			serverId: serverId || "",
-		},
-		{
-			enabled: !!serverId && serverId !== "null" && !!appName && !!composeId,
-			refetchInterval: 5000,
-			retry: 3,
-			onError(error) {
-				console.error("Failed to fetch container details:", error, {
-					serverId,
-					appName,
-					composeId,
-				});
-			},
-		},
-	);
-	// Simplified query enabling - remove dependency on containerDetails.length
-	// Simplified query enabling logic to match monitoring tab pattern
-	// Enhanced container config query with better error handling and validation
-	// Move containerIds calculation to useMemo to prevent hook dependency issues
-	const containerIds = useMemo(() => {
-		return (
-			containerDetails
-				?.filter(
-					(
-						c: RouterOutputs["docker"]["getContainersByAppNameMatch"][number],
-					): c is NonNullable<typeof c> => !!c?.containerId,
-				)
-				.map(
-					(c: RouterOutputs["docker"]["getContainersByAppNameMatch"][number]) =>
-						c.containerId,
-				) || []
-		);
-	}, [containerDetails]);
-
-	const {
-		data: containerConfigs = [],
-		error: containerConfigError,
-		isLoading: isLoadingConfigs,
-	} = api.docker.getContainersConfig.useQuery(
-		{
-			appName,
-			appType,
-			serverId: serverId || "",
-			containerIds,
-		},
-		{
-			enabled: !!serverId && serverId !== "null" && !!appName && !!composeId,
-			refetchInterval: 5000,
-			retry: 3,
-			onError(error) {
-				console.error("Failed to fetch container configs:", error, {
-					composeId,
-					serverId,
-					appName,
-					containerCount: containerIds.length,
-				});
-			},
-			onSuccess(data) {
-				console.debug("Successfully fetched container configs:", {
-					configCount: data.length,
-					containers: data.map((config) => ({
-						id: config.Id,
-						name: config.Name,
-						state: config.State?.Status,
-						health: config.State?.Health?.Status,
-						startedAt: config.State?.StartedAt,
-					})),
-				});
-			},
-		},
-	);
+	// Removed duplicate query declarations - using the ones from above
 
 	// Combine container details with their configs
 	// Helper function to find matching container with flexible name matching
@@ -496,7 +637,6 @@ export const ShowOverviewCompose = ({
 	};
 
 	// Enhanced container data processing with strict type checking and validation
-	// Split container processing into two steps to prevent hook dependency issues
 	const validContainers = useMemo(() => {
 		if (!containerDetails) {
 			console.debug("No container details available");
@@ -519,121 +659,6 @@ export const ShowOverviewCompose = ({
 			},
 		);
 	}, [containerDetails]);
-
-	// Optimize container enrichment to prevent unnecessary updates
-	const enrichedContainers = useMemo((): Container[] => {
-		// Skip processing during loading states
-		if (isLoadingServices || isLoadingContainers || isLoadingConfigs) {
-			console.debug("Skipping container enrichment due to loading state", {
-				isLoadingServices,
-				isLoadingContainers,
-				isLoadingConfigs,
-			});
-			return [];
-		}
-
-		if (!validContainers?.length || !containerConfigs?.length) {
-			console.debug("No valid containers or configs available", {
-				validContainersCount: validContainers?.length,
-				containerConfigsCount: containerConfigs?.length,
-			});
-			return [];
-		}
-
-		const containers = validContainers.map(
-			(
-				detail: RouterOutputs["docker"]["getContainersByAppNameMatch"][number],
-			): Container => {
-				// Find matching config with detailed logging
-				const config = containerConfigs.find((c) => {
-					const matches = c.Id === detail.containerId;
-					if (matches) {
-						console.debug(
-							`Found matching config for container ${detail.name}`,
-							{
-								containerId: detail.containerId,
-								state: c.State?.Status,
-								health: c.State?.Health?.Status,
-								startedAt: c.State?.StartedAt,
-							},
-						);
-					}
-					return matches;
-				});
-
-				if (!config) {
-					console.warn(`No config found for container ${detail.name}`, {
-						containerId: detail.containerId,
-						availableIds: containerConfigs.map((c) => c.Id),
-					});
-				}
-
-				// Enhanced container data with strict validation and proper type handling
-				const enrichedContainer = {
-					name: detail.name,
-					containerId: detail.containerId,
-					state: detail.state,
-					health: config?.State?.Health
-						? {
-								Status: config.State.Health.Status,
-								FailingStreak: config.State.Health.FailingStreak,
-								Log: config.State.Health.Log,
-							}
-						: undefined,
-					startedAt: config?.State?.StartedAt
-						? new Date(config.State.StartedAt).toISOString()
-						: undefined,
-				};
-
-				// Validate enriched container data
-				const validation = {
-					hasName: !!enrichedContainer.name,
-					hasId: !!enrichedContainer.containerId,
-					hasState: !!enrichedContainer.state,
-					hasHealth: !!enrichedContainer.health,
-					hasStartedAt: !!enrichedContainer.startedAt,
-					healthStatus: enrichedContainer.health?.Status,
-					startedAtValid: enrichedContainer.startedAt
-						? !Number.isNaN(new Date(enrichedContainer.startedAt).getTime())
-						: false,
-				};
-
-				console.debug(
-					`Container ${detail.name} enrichment validation:`,
-					validation,
-				);
-
-				return enrichedContainer;
-			},
-		);
-
-		// Log overall container processing results with detailed stats
-		console.debug("Processed containers:", {
-			totalCount: containers.length,
-			withHealth: containers.filter((c) => !!c.health).length,
-			withStartTime: containers.filter((c) => !!c.startedAt).length,
-			healthStatuses: containers
-				.filter((c) => c.health)
-				.map((c) => c.health?.Status),
-			states: containers.map((c) => c.state),
-			uptimes: containers
-				.filter((c) => c.startedAt)
-				.map((c) => ({
-					name: c.name,
-					uptime: c.startedAt
-						? formatDistanceToNow(new Date(c.startedAt), { addSuffix: true })
-						: undefined,
-				})),
-		});
-
-		return containers;
-	}, [
-		validContainers,
-		containerConfigs,
-		isLoadingServices,
-		isLoadingContainers,
-		isLoadingConfigs,
-	]);
 
 	// Move selectContainer to useCallback for consistent hook ordering
 	const selectContainer = useCallback(
@@ -842,34 +867,7 @@ export const ShowOverviewCompose = ({
 			<CardContent>
 				<div className="flex flex-row gap-4 mb-4">
 					<Select
-						onValueChange={useCallback(
-							(value: string) => {
-								console.debug("Container selection changed:", { value });
-								const container = enrichedContainers.find(
-									(c) => c.name === value,
-								);
-								if (container) {
-									console.debug("Found matching container:", {
-										name: container.name,
-										containerId: container.containerId,
-									});
-									setContainerAppName(value);
-									setContainerId(container.containerId);
-									// Preserve all query parameters when updating container
-									void router.push(
-										{
-											query: {
-												...router.query,
-												containerId: container.containerId,
-											},
-										},
-										undefined,
-										{ shallow: true },
-									);
-								}
-							},
-							[enrichedContainers, router, setContainerAppName, setContainerId],
-						)}
+						onValueChange={handleContainerSelect}
 						value={containerAppName}
 					>
 						<SelectTrigger className="w-[300px]">
@@ -927,7 +925,11 @@ export const ShowOverviewCompose = ({
 								}
 
 								// Show loading state only during initial load
-								if (isLoadingServices || isLoadingContainers || isLoadingConfigs) {
+								if (
+									isLoadingServices ||
+									isLoadingContainers ||
+									isLoadingConfigs
+								) {
 									return (
 										<TableRow>
 											<TableCell colSpan={5} className="h-24 text-center">
@@ -960,6 +962,8 @@ export const ShowOverviewCompose = ({
 												<TableRow
 													key={container.containerId}
 													className={isSelected ? "bg-muted/50" : ""}
+													onClick={() => handleContainerSelect(container.name)}
+													style={{ cursor: "pointer" }}
 												>
 													<TableCell className="font-medium">
 														{container.name}
@@ -973,10 +977,19 @@ export const ShowOverviewCompose = ({
 														/>
 													</TableCell>
 													<TableCell>
-														<HealthStatusBadge container={container} />
+														<HealthStatusBadge
+															health={container.health}
+															name={container.name}
+															state={container.state}
+														/>
 													</TableCell>
 													<TableCell>
-														<UptimeDisplay container={container} />
+														<UptimeDisplay
+															startedAt={container.startedAt}
+															name={container.name}
+															state={container.state}
+															health={container.health}
+														/>
 													</TableCell>
 													<TableCell className="text-right">
 														<div className="flex justify-end gap-2">
