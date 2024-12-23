@@ -116,6 +116,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 	// Get serverId early to use in queries
 	const serverId = compose?.serverId;
 
+	// Simplified services query with better error handling
 	const { data: services = [], isLoading: isLoadingServices } =
 		api.compose.loadServices.useQuery(
 			{
@@ -125,10 +126,15 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			{
 				enabled: !!composeId,
 				refetchInterval: 5000 as const, // Refresh every 5 seconds for real-time updates
+				retry: 3,
+				onError: (error) => {
+					console.error("Failed to fetch services:", error);
+				},
 			},
 		);
 
 	// Query container details with real-time updates
+	// Simplified container details query with better type handling
 	const {
 		data: containerDetails = [],
 		isLoading: isLoadingContainers,
@@ -137,10 +143,10 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		{
 			appName: compose?.appName || "",
 			appType: compose?.composeType || "docker-compose",
-			serverId: typeof serverId === "string" ? serverId : "",
+			serverId: serverId || "",
 		},
 		{
-			enabled: !!compose?.appName && typeof serverId === "string",
+			enabled: !!composeId,
 			refetchInterval: 5000 as const,
 			retry: 3,
 			onError: (error) => {
@@ -148,31 +154,17 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			},
 		},
 	);
-	const queryEnabled =
-		!!compose?.appName &&
-		typeof serverId === "string" &&
-		containerDetails.length > 0;
-
-	console.log("Container Configs Query Conditions:", {
-		hasAppName: !!compose?.appName,
-		hasServerId: !!serverId,
-		isServerIdString: typeof serverId === "string",
-		containerDetailsLength: containerDetails.length,
-		enabled: queryEnabled,
-		serverId,
-		containerIds: containerDetails.map((c) => c.containerId),
-	});
-
+	// Simplified query enabling - remove dependency on containerDetails.length
 	const { data: containerConfigs = [] } =
 		api.docker.getContainersConfig.useQuery(
 			{
 				appName: compose?.appName || "",
 				appType: compose?.composeType || "docker-compose",
-				serverId: typeof serverId === "string" ? serverId : "",
-				containerIds: containerDetails.map((c) => c.containerId),
+				serverId: serverId || "",
+				containerIds: containerDetails?.map((c) => c.containerId) || [],
 			},
 			{
-				enabled: queryEnabled,
+				enabled: !!compose?.appName && !!serverId,
 				refetchInterval: 5000 as const,
 				retry: 3,
 				onError: (error) => {
@@ -211,134 +203,145 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		return partialMatch;
 	};
 
-	const containers: Container[] = useMemo(() => {
-		if (!compose?.serverId) {
-			console.warn("No serverId available for container configs", { compose });
-			return [];
-		}
-
-		if (!containerDetails || !containerConfigs?.length) {
-			console.warn("No container details or configs available", {
-				hasContainerDetails: !!containerDetails,
-				containerDetailsLength: containerDetails?.length,
-				hasContainerConfigs: !!containerConfigs,
-				containerConfigsLength: containerConfigs?.length,
-			});
-			return [];
-		}
-
-		return containerDetails.map((detail) => {
-			const config = containerConfigs.find((c) => c.Id === detail.containerId);
-
-			const baseContainer: Container = {
-				...detail,
-				health: undefined,
-				startedAt: undefined,
-			};
-
-			if (!config?.State) {
-				console.warn(
-					`No state found for container ${detail.containerId} (${detail.name})`,
-				);
-				return baseContainer;
-			}
-
-			const enrichedContainer: Container = {
-				...baseContainer,
-				health: config.State.Health,
-				startedAt: config.State.StartedAt,
-			};
-
-			// Detailed logging for container state and health
-			console.log(`Container ${enrichedContainer.name} details:`, {
-				state: enrichedContainer.state,
-				startedAt: enrichedContainer.startedAt,
-				health: {
-					status: enrichedContainer.health?.Status,
-					failingStreak: enrichedContainer.health?.FailingStreak,
-					logs: enrichedContainer.health?.Log?.length
-						? enrichedContainer.health.Log[
-								enrichedContainer.health.Log.length - 1
-							]
-						: undefined,
-				},
-				rawState: config.State,
-			});
-
-			return enrichedContainer;
+	// Enhanced container data processing with proper typing
+	const enrichedContainers = useMemo((): Container[] => {
+		console.debug("Processing container data:", {
+			containerDetailsLength: containerDetails?.length,
+			containerConfigsLength: containerConfigs?.length,
 		});
-	}, [containerDetails, containerConfigs, compose?.serverId]);
 
-	// Sync container selection with router query
-	// Sync container selection with router query
-	// Handle container selection and router query sync
+		return (
+			containerDetails?.map((detail): Container => {
+				const config = containerConfigs?.find(
+					(c: ContainerConfig) => c.Id === detail.containerId,
+				);
+				console.debug(`Processing container ${detail.name}:`, {
+					containerId: detail.containerId,
+					hasConfig: !!config,
+					startedAt: config?.State?.StartedAt,
+					health: config?.State?.Health?.Status,
+				});
+
+				// Ensure we return an object that exactly matches the Container interface
+				return {
+					name: detail.name,
+					containerId: detail.containerId,
+					state: detail.state,
+					health: config?.State?.Health,
+					startedAt: config?.State?.StartedAt,
+				};
+			}) || []
+		);
+	}, [containerDetails, containerConfigs]);
+
+	// Match monitoring tab's container selection pattern with proper type safety
 	useEffect(() => {
-		if (!containers?.length) {
-			console.debug("No containers available yet");
+		console.debug("Container selection effect running", {
+			queryContainerId: router.query.containerId,
+			enrichedContainersLength: enrichedContainers?.length,
+		});
+
+		// Ensure we have valid container data
+		if (!Array.isArray(enrichedContainers) || enrichedContainers.length === 0) {
+			console.debug("No containers available");
 			return;
 		}
 
-		// Try to find container by ID from router query
-		const container = containers.find(
-			(c) => c.containerId === router.query.containerId,
-		);
+		// Get first container safely
+		const firstContainer = enrichedContainers[0];
+		if (!firstContainer?.name || !firstContainer?.containerId) {
+			console.warn("Invalid first container data:", firstContainer);
+			return;
+		}
 
-		if (container) {
-			console.debug("Found container from query:", container.name);
+		const selectContainer = (container: Container) => {
+			if (!container?.name || !container?.containerId) {
+				console.warn("Invalid container data:", container);
+				return;
+			}
+
+			console.debug("Selecting container:", {
+				name: container.name,
+				startedAt: container.startedAt,
+				containerId: container.containerId,
+			});
+
 			setContainerAppName(container.name);
 			setContainerId(container.containerId);
-		} else if (!containerId || !containerAppName) {
-			// No container selected or not found in current list, fallback to first
-			if (containers[0]) {
-				console.debug("Falling back to first container:", containers[0].name);
-				setContainerAppName(containers[0].name);
-				setContainerId(containers[0].containerId);
 
-				// Update router query to match selected container
-				const query = {
-					...router.query,
-					containerId: containers[0].containerId,
-				};
-				router.push({ query }, undefined, { shallow: true });
+			void router.push(
+				{
+					query: {
+						...router.query,
+						containerId: container.containerId,
+					},
+				},
+				undefined,
+				{ shallow: true },
+			);
+		};
+
+		if (router.query.containerId) {
+			const container = enrichedContainers.find(
+				(c) => c?.containerId === router.query.containerId,
+			);
+			if (container) {
+				selectContainer(container);
+			} else {
+				// If container not found by ID, fall back to first container
+				console.debug("Container not found by ID, falling back to first:", {
+					firstContainerId: firstContainer.containerId,
+					firstContainerName: firstContainer.name,
+				});
+				selectContainer(firstContainer);
 			}
+		} else {
+			// No container ID in query, use first container
+			console.debug("No container ID in query, using first:", {
+				firstContainerId: firstContainer.containerId,
+				firstContainerName: firstContainer.name,
+			});
+			selectContainer(firstContainer);
 		}
-	}, [containers, router.query.containerId, containerId, containerAppName]);
+	}, [enrichedContainers, router.query.containerId]);
 
-	// Map container state and health to status
+	// Map container state and health to status with proper typing
 	const mapContainerStateToStatus = (
 		state: DockerContainerState | string,
 		health?: ContainerHealth,
 	): "idle" | "error" | "done" | "running" => {
 		// Prioritize health status if available
 		if (health?.Status) {
-			switch (health.Status.toLowerCase()) {
+			const healthStatus = health.Status.toLowerCase();
+			switch (healthStatus) {
 				case "healthy":
 					return "running";
 				case "unhealthy":
 					return "error";
 				case "starting":
 					return "idle";
+				default:
+					console.debug(`Unknown health status: ${healthStatus}`);
 			}
 		}
 
 		// Fallback to container state
-		switch (state.toLowerCase()) {
+		const containerState = state.toLowerCase() as DockerContainerState;
+		switch (containerState) {
 			case "running":
 				return "running";
 			case "exited":
 				return "error";
 			case "created":
-				return "idle";
 			case "paused":
 				return "idle";
 			case "restarting":
 				return "running";
 			case "removing":
-				return "error";
 			case "dead":
 				return "error";
 			default:
-				console.warn(`Unknown container state: ${state}`);
+				console.warn(`Unknown container state: ${containerState}`);
 				return "idle";
 		}
 	};
@@ -357,15 +360,27 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				<div className="flex flex-row gap-4 mb-4">
 					<Select
 						onValueChange={(value) => {
-							const container = containers.find((c) => c.name === value);
+							console.debug("Container selection changed:", { value });
+							const container = enrichedContainers.find(
+								(c) => c.name === value,
+							);
 							if (container) {
+								console.debug("Found matching container:", {
+									name: container.name,
+									startedAt: container.startedAt,
+								});
 								setContainerAppName(value);
 								setContainerId(container.containerId);
-								const query = {
-									...router.query,
-									containerId: container.containerId,
-								};
-								router.push({ query });
+								void router.push(
+									{
+										query: {
+											...router.query,
+											containerId: container.containerId,
+										},
+									},
+									undefined,
+									{ shallow: true },
+								);
 							}
 						}}
 						value={containerAppName}
@@ -382,7 +397,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 						</SelectTrigger>
 						<SelectContent>
 							<SelectGroup>
-								{containers.map((container) => (
+								{enrichedContainers.map((container) => (
 									<SelectItem
 										key={container.containerId}
 										value={container.name}
@@ -390,7 +405,9 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 										{container.name} ({container.containerId}) {container.state}
 									</SelectItem>
 								))}
-								<SelectLabel>Containers ({containers.length})</SelectLabel>
+								<SelectLabel>
+									Containers ({enrichedContainers.length})
+								</SelectLabel>
 							</SelectGroup>
 						</SelectContent>
 					</Select>
@@ -426,14 +443,14 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 										</div>
 									</TableCell>
 								</TableRow>
-							) : containers.length === 0 ? (
+							) : enrichedContainers.length === 0 ? (
 								<TableRow>
 									<TableCell colSpan={5} className="h-24 text-center">
 										No containers found
 									</TableCell>
 								</TableRow>
 							) : (
-								containers.map((container) => {
+								enrichedContainers.map((container) => {
 									const isSelected = container.containerId === containerId;
 									return (
 										<TableRow
@@ -473,11 +490,24 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 												</Badge>
 											</TableCell>
 											<TableCell>
-												{container?.startedAt
-													? formatDistanceToNow(new Date(container.startedAt), {
+												{(() => {
+													try {
+														if (!container?.startedAt) return "-";
+														const startDate = new Date(container.startedAt);
+														if (Number.isNaN(startDate.getTime())) {
+															console.warn(
+																`Invalid startedAt date: ${container.startedAt}`,
+															);
+															return "-";
+														}
+														return formatDistanceToNow(startDate, {
 															addSuffix: true,
-														})
-													: "-"}
+														});
+													} catch (error) {
+														console.error("Error formatting uptime:", error);
+														return "-";
+													}
+												})()}
 											</TableCell>
 											<TableCell className="text-right">
 												<div className="flex justify-end gap-2">
@@ -486,7 +516,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 														size="sm"
 														onClick={() => {
 															// Find matching container and update query
-															const matchingContainer = containers.find(
+															const matchingContainer = containerDetails?.find(
 																(c) => c.containerId === container.containerId,
 															);
 															if (matchingContainer) {
@@ -495,7 +525,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 																	tab: "logs",
 																	containerId: matchingContainer.containerId,
 																};
-																router.push({ query }, undefined, {
+																void router.push({ query }, undefined, {
 																	shallow: true,
 																});
 															}
@@ -509,7 +539,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 														size="sm"
 														onClick={() => {
 															// Find matching container and update query
-															const matchingContainer = containers.find(
+															const matchingContainer = containerDetails?.find(
 																(c) => c.containerId === container.containerId,
 															);
 															if (matchingContainer) {
@@ -518,7 +548,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 																	tab: "monitoring",
 																	containerId: matchingContainer.containerId,
 																};
-																router.push({ query }, undefined, {
+																void router.push({ query }, undefined, {
 																	shallow: true,
 																});
 															}
