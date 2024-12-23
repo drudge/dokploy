@@ -1,4 +1,7 @@
 import { join } from "node:path";
+import { generateBase64 } from "@dokploy/server/utils/docker/utils";
+import { execAsync } from "@dokploy/server/utils/process/execAsync";
+import { runtimeModifyCompose } from "./deployment";
 import { paths } from "@dokploy/server/constants";
 import { db } from "@dokploy/server/db";
 import { type apiCreateCompose, compose } from "@dokploy/server/db/schema";
@@ -206,6 +209,7 @@ export const deployCompose = async ({
 }) => {
 	const compose = await findComposeById(composeId);
 	const buildLink = `${await getDokployUrl()}/dashboard/project/${compose.projectId}/services/compose/${compose.composeId}?tab=deployments`;
+	const uuid = generateBase64(8);
 	const deployment = await createDeploymentCompose({
 		composeId: composeId,
 		title: titleLog,
@@ -228,6 +232,29 @@ export const deployCompose = async ({
 		} else if (compose.sourceType === "raw") {
 			await createComposeFile(compose, deployment.logPath);
 		}
+
+		// Create isolated network for this deployment
+		if (compose.serverId) {
+			await execAsyncRemote(
+				compose.serverId,
+				`docker network inspect ${uuid} >/dev/null 2>&1 || docker network create --attachable ${uuid}`
+			);
+			// Connect to proxy network if needed
+			await execAsyncRemote(
+				compose.serverId,
+				`docker network connect ${uuid} dokploy-proxy >/dev/null 2>&1 || true`
+			);
+		} else {
+			await execAsync(
+				`docker network inspect ${uuid} >/dev/null 2>&1 || docker network create --attachable ${uuid}`
+			);
+			await execAsync(
+				`docker network connect ${uuid} dokploy-proxy >/dev/null 2>&1 || true`
+			);
+		}
+
+		// Modify compose file with runtime network isolation
+		compose.composeFile = await runtimeModifyCompose(compose.composeFile, uuid);
 		await buildCompose(compose, deployment.logPath);
 		await updateDeploymentStatus(deployment.deploymentId, "done");
 		await updateCompose(composeId, {
@@ -347,6 +374,20 @@ export const deployRemoteCompose = async ({
 			}
 
 			await execAsyncRemote(compose.serverId, command);
+
+			// Create isolated network for this deployment
+			await execAsyncRemote(
+				compose.serverId,
+				`docker network inspect ${uuid} >/dev/null 2>&1 || docker network create --attachable ${uuid}`
+			);
+			// Connect to proxy network if needed
+			await execAsyncRemote(
+				compose.serverId,
+				`docker network connect ${uuid} dokploy-proxy >/dev/null 2>&1 || true`
+			);
+
+			// Modify compose file with runtime network isolation
+			compose.composeFile = await runtimeModifyCompose(compose.composeFile, uuid);
 			await getBuildComposeCommand(compose, deployment.logPath);
 		}
 
