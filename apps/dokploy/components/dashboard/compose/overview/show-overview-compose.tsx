@@ -89,7 +89,102 @@ interface Props {
 
 import { ExternalLink, FileText } from "lucide-react";
 import { useRouter } from "next/router";
-import React from "react";
+import React, { memo } from "react";
+
+// Separate components for better organization and hook consistency
+const HealthStatusBadge = memo(({ container }: { container: Container }) => {
+	// Enhanced health status processing with validation
+	const healthStatus = container.health?.Status?.toLowerCase() ?? null;
+	const hasHealth = !!container.health?.Status;
+	const failingStreak = container.health?.FailingStreak ?? 0;
+	const healthLogs = container.health?.Log ?? [];
+
+	console.debug(`Health status for ${container.name}:`, {
+		status: healthStatus,
+		hasHealth,
+		failingStreak,
+		logCount: healthLogs.length,
+		rawHealth: container.health,
+		containerState: container.state,
+	});
+
+	// Determine badge variant and class based on health status
+	let variant: "default" | "destructive" | "secondary" = "secondary";
+	let className: string | undefined;
+
+	if (healthStatus === "healthy") {
+		variant = "default";
+		className = "bg-green-500 hover:bg-green-500/90";
+	} else if (healthStatus === "unhealthy") {
+		variant = "destructive";
+	}
+
+	return (
+		<Badge variant={variant} className={className}>
+			{hasHealth && container.health?.Status
+				? container.health.Status
+				: "No health check"}
+		</Badge>
+	);
+});
+
+const UptimeDisplay = memo(({ container }: { container: Container }) => {
+	try {
+		if (!container?.startedAt) {
+			console.debug(`No startedAt for container ${container.name}:`, {
+				container,
+				state: container.state,
+				health: container.health?.Status,
+			});
+			return <>-</>;
+		}
+
+		const startDate = new Date(container.startedAt);
+		if (Number.isNaN(startDate.getTime())) {
+			console.warn(`Invalid startedAt date for ${container.name}:`, {
+				startedAt: container.startedAt,
+				container,
+			});
+			return <>-</>;
+		}
+
+		const now = new Date();
+		if (startDate > now) {
+			console.warn(`Future startedAt date for ${container.name}:`, {
+				startedAt: container.startedAt,
+				now: now.toISOString(),
+				diff: startDate.getTime() - now.getTime(),
+				container,
+			});
+			return <>-</>;
+		}
+
+		const uptime = formatDistanceToNow(startDate, {
+			addSuffix: true,
+			includeSeconds: true,
+		});
+
+		console.debug(`Uptime for ${container.name}:`, {
+			startedAt: container.startedAt,
+			parsedStartDate: startDate.toISOString(),
+			uptime,
+			now: now.toISOString(),
+			container: {
+				state: container.state,
+				health: container.health?.Status,
+			},
+		});
+
+		return <>{uptime}</>;
+	} catch (error) {
+		console.error(`Error formatting uptime for ${container.name}:`, {
+			error,
+			container,
+			startedAt: container.startedAt,
+		});
+		return <>-</>;
+	}
+});
 
 export const ShowOverviewCompose = ({
 	composeId,
@@ -325,7 +420,7 @@ export const ShowOverviewCompose = ({
 		} else {
 			console.debug("No containers available for selection");
 		}
-	}, [enrichedContainers, router.query.containerId, router.query]);
+	}, [enrichedContainers, router.query]);
 
 	// Map container state and health to status with proper typing and detailed logging
 	const mapContainerStateToStatus = (
@@ -560,127 +655,10 @@ export const ShowOverviewCompose = ({
 												/>
 											</TableCell>
 											<TableCell>
-												{(() => {
-													// Enhanced health status processing with validation
-													const healthStatus =
-														container.health?.Status?.toLowerCase() ?? null;
-													const hasHealth = !!container.health?.Status;
-													const failingStreak =
-														container.health?.FailingStreak ?? 0;
-													const healthLogs = container.health?.Log ?? [];
-
-													console.debug(
-														`Health status for ${container.name}:`,
-														{
-															status: healthStatus,
-															hasHealth,
-															failingStreak,
-															logCount: healthLogs.length,
-															rawHealth: container.health, // Log full health object
-															containerState: container.state,
-														},
-													);
-
-													// Determine badge variant and class based on health status
-													let variant: "default" | "destructive" | "secondary" =
-														"secondary";
-													let className: string | undefined;
-
-													if (healthStatus === "healthy") {
-														variant = "default";
-														className = "bg-green-500 hover:bg-green-500/90";
-													} else if (healthStatus === "unhealthy") {
-														variant = "destructive";
-													}
-
-													return (
-														<Badge variant={variant} className={className}>
-															{(() => {
-																// Ensure health status exists before accessing
-																if (hasHealth && container.health?.Status) {
-																	return container.health.Status;
-																}
-																return "No health check";
-															})()}
-														</Badge>
-													);
-												})()}
+												<HealthStatusBadge container={container} />
 											</TableCell>
 											<TableCell>
-												{(() => {
-													try {
-														// Enhanced uptime calculation with better validation
-														if (!container?.startedAt) {
-															console.debug(
-																`No startedAt for container ${container.name}:`,
-																{
-																	container,
-																	state: container.state,
-																	health: container.health?.Status,
-																},
-															);
-															return "-";
-														}
-
-														// Parse and validate the date with timezone handling
-														const startDate = new Date(container.startedAt);
-														if (Number.isNaN(startDate.getTime())) {
-															console.warn(
-																`Invalid startedAt date for ${container.name}:`,
-																{
-																	startedAt: container.startedAt,
-																	container,
-																},
-															);
-															return "-";
-														}
-
-														// Enhanced date validation with detailed logging
-														const now = new Date();
-														if (startDate > now) {
-															console.warn(
-																`Future startedAt date for ${container.name}:`,
-																{
-																	startedAt: container.startedAt,
-																	now: now.toISOString(),
-																	diff: startDate.getTime() - now.getTime(),
-																	container,
-																},
-															);
-															return "-";
-														}
-
-														// Calculate uptime with more precise options
-														const uptime = formatDistanceToNow(startDate, {
-															addSuffix: true,
-															includeSeconds: true,
-														});
-
-														// Enhanced debug logging
-														console.debug(`Uptime for ${container.name}:`, {
-															startedAt: container.startedAt,
-															parsedStartDate: startDate.toISOString(),
-															uptime,
-															now: now.toISOString(),
-															container: {
-																state: container.state,
-																health: container.health?.Status,
-															},
-														});
-
-														return uptime;
-													} catch (error) {
-														console.error(
-															`Error formatting uptime for ${container.name}:`,
-															{
-																error,
-																container,
-																startedAt: container.startedAt,
-															},
-														);
-														return "-";
-													}
-												})()}
+												<UptimeDisplay container={container} />
 											</TableCell>
 											<TableCell className="text-right">
 												<div className="flex justify-end gap-2">
