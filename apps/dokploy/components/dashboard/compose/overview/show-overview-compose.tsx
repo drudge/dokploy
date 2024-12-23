@@ -254,7 +254,10 @@ export const ShowOverviewCompose = ({
 	appType,
 }: Props) => {
 	const router = useRouter();
-	const projectId = typeof router.query.projectId === "string" ? router.query.projectId : undefined;
+	const projectId =
+		typeof router.query.projectId === "string"
+			? router.query.projectId
+			: undefined;
 
 	const [containerAppName, setContainerAppName] = useState<string>();
 	const [containerId, setContainerId] = useState<string>();
@@ -520,6 +523,19 @@ export const ShowOverviewCompose = ({
 	const enrichedContainers = useMemo((): Container[] => {
 		// Skip processing during loading states
 		if (isLoadingServices || isLoadingContainers || isLoadingConfigs) {
+			console.debug("Skipping container enrichment due to loading state", {
+				isLoadingServices,
+				isLoadingContainers,
+				isLoadingConfigs,
+			});
+			return [];
+		}
+
+		if (!validContainers?.length || !containerConfigs?.length) {
+			console.debug("No valid containers or configs available", {
+				validContainersCount: validContainers?.length,
+				containerConfigsCount: containerConfigs?.length,
+			});
 			return [];
 		}
 
@@ -527,37 +543,86 @@ export const ShowOverviewCompose = ({
 			(
 				detail: RouterOutputs["docker"]["getContainersByAppNameMatch"][number],
 			): Container => {
-				const config = containerConfigs.find(
-					(c: ContainerConfig) => c.Id === detail.containerId,
-				);
+				// Find matching config with detailed logging
+				const config = containerConfigs.find((c) => {
+					const matches = c.Id === detail.containerId;
+					if (matches) {
+						console.debug(
+							`Found matching config for container ${detail.name}`,
+							{
+								containerId: detail.containerId,
+								state: c.State?.Status,
+								health: c.State?.Health?.Status,
+								startedAt: c.State?.StartedAt,
+							},
+						);
+					}
+					return matches;
+				});
 
-				// Enhanced container data with strict validation
+				if (!config) {
+					console.warn(`No config found for container ${detail.name}`, {
+						containerId: detail.containerId,
+						availableIds: containerConfigs.map((c) => c.Id),
+					});
+				}
+
+				// Enhanced container data with strict validation and proper type handling
 				const enrichedContainer = {
 					name: detail.name,
 					containerId: detail.containerId,
 					state: detail.state,
-					health: config?.State?.Health ?? undefined,
-					startedAt: config?.State?.StartedAt ?? undefined,
+					health: config?.State?.Health
+						? {
+								Status: config.State.Health.Status,
+								FailingStreak: config.State.Health.FailingStreak,
+								Log: config.State.Health.Log,
+							}
+						: undefined,
+					startedAt: config?.State?.StartedAt
+						? new Date(config.State.StartedAt).toISOString()
+						: undefined,
 				};
 
-				// Log container enrichment for debugging
-				console.debug(`Container ${detail.name} state:`, {
-					...enrichedContainer,
+				// Validate enriched container data
+				const validation = {
+					hasName: !!enrichedContainer.name,
+					hasId: !!enrichedContainer.containerId,
+					hasState: !!enrichedContainer.state,
 					hasHealth: !!enrichedContainer.health,
 					hasStartedAt: !!enrichedContainer.startedAt,
-					isValid: !!(detail.name && detail.containerId && detail.state),
-				});
+					healthStatus: enrichedContainer.health?.Status,
+					startedAtValid: enrichedContainer.startedAt
+						? !Number.isNaN(new Date(enrichedContainer.startedAt).getTime())
+						: false,
+				};
+
+				console.debug(
+					`Container ${detail.name} enrichment validation:`,
+					validation,
+				);
 
 				return enrichedContainer;
 			},
 		);
 
-		// Log overall container processing results
+		// Log overall container processing results with detailed stats
 		console.debug("Processed containers:", {
 			totalCount: containers.length,
 			withHealth: containers.filter((c) => !!c.health).length,
 			withStartTime: containers.filter((c) => !!c.startedAt).length,
+			healthStatuses: containers
+				.filter((c) => c.health)
+				.map((c) => c.health?.Status),
 			states: containers.map((c) => c.state),
+			uptimes: containers
+				.filter((c) => c.startedAt)
+				.map((c) => ({
+					name: c.name,
+					uptime: c.startedAt
+						? formatDistanceToNow(new Date(c.startedAt), { addSuffix: true })
+						: undefined,
+				})),
 		});
 
 		return containers;
@@ -776,31 +841,34 @@ export const ShowOverviewCompose = ({
 			<CardContent>
 				<div className="flex flex-row gap-4 mb-4">
 					<Select
-						onValueChange={(value) => {
-							console.debug("Container selection changed:", { value });
-							const container = enrichedContainers.find(
-								(c) => c.name === value,
-							);
-							if (container) {
-								console.debug("Found matching container:", {
-									name: container.name,
-									containerId: container.containerId,
-								});
-								setContainerAppName(value);
-								setContainerId(container.containerId);
-								// Preserve all query parameters when updating container
-								void router.push(
-									{
-										query: {
-											...router.query,
-											containerId: container.containerId,
-										},
-									},
-									undefined,
-									{ shallow: true },
+						onValueChange={useCallback(
+							(value) => {
+								console.debug("Container selection changed:", { value });
+								const container = enrichedContainers.find(
+									(c) => c.name === value,
 								);
-							}
-						}}
+								if (container) {
+									console.debug("Found matching container:", {
+										name: container.name,
+										containerId: container.containerId,
+									});
+									setContainerAppName(value);
+									setContainerId(container.containerId);
+									// Preserve all query parameters when updating container
+									void router.push(
+										{
+											query: {
+												...router.query,
+												containerId: container.containerId,
+											},
+										},
+										undefined,
+										{ shallow: true },
+									);
+								}
+							},
+							[enrichedContainers, router, setContainerAppName, setContainerId],
+						)}
 						value={containerAppName}
 					>
 						<SelectTrigger className="w-[300px]">
