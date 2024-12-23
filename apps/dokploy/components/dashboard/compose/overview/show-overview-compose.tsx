@@ -129,7 +129,8 @@ const HealthStatusBadge = memo(({ container }: { container: Container }) => {
 		}
 
 		// Determine badge variant and class based on health status
-		let variant: "default" | "destructive" | "secondary" | "warning" = "secondary";
+		let variant: "default" | "destructive" | "secondary" | "warning" =
+			"secondary";
 		let className: string | undefined;
 		let label = hasHealth ? container.health?.Status : "No health check";
 
