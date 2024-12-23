@@ -152,14 +152,10 @@ export const ShowOverviewCompose = ({
 			appName,
 			appType,
 			serverId,
-			containerIds: containerDetails?.map((c) => c.containerId) || [],
+			containerIds: containerDetails?.filter((c): c is NonNullable<typeof c> => !!c?.containerId).map((c) => c.containerId) || [],
 		},
 		{
-			enabled:
-				!!composeId &&
-				!!serverId &&
-				!!appName &&
-				(containerDetails?.length ?? 0) > 0,
+			enabled: !!composeId && !!serverId && !!appName,
 			refetchInterval: 5000 as const,
 			retry: 3,
 			onError: (error) => {
@@ -217,11 +213,9 @@ export const ShowOverviewCompose = ({
 
 	// Enhanced container data processing with strict type checking and validation
 	const enrichedContainers = useMemo((): Container[] => {
-		if (!containerDetails || !containerConfigs) {
-			console.debug("Missing container data:", {
-				hasDetails: !!containerDetails,
-				hasConfigs: !!containerConfigs,
-			});
+		// Allow processing even without configs, just with less data
+		if (!containerDetails) {
+			console.debug("No container details available");
 			return [];
 		}
 
@@ -691,36 +685,38 @@ export const ShowOverviewCompose = ({
 														variant="outline"
 														size="sm"
 														onClick={() => {
-															// Use enriched container data for consistent routing
-															// Ensure container has required properties before routing
-															if (!container?.containerId) {
+															// Enhanced container validation and routing
+															if (!container?.containerId || !container?.name) {
 																console.warn(
 																	"Invalid container for logs:",
 																	container,
 																);
 																return;
 															}
+
+															// Preserve all existing query parameters
 															const query = {
 																...router.query,
 																tab: "logs",
 																containerId: container.containerId,
+																containerName: container.name, // Add container name for better context
 															};
+
+															// Enhanced debug logging
 															console.debug("Routing to logs:", {
 																query,
 																container: {
+																	id: container.containerId,
 																	name: container.name,
 																	state: container.state,
 																	health: container.health?.Status,
-																	uptime: container.startedAt
-																		? formatDistanceToNow(
-																				new Date(container.startedAt),
-																				{
-																					addSuffix: true,
-																				},
-																			)
-																		: undefined,
+																	startedAt: container.startedAt,
 																},
+																currentPath: router.pathname,
+																currentQuery: router.query,
 															});
+
+															// Use consistent routing with query preservation
 															void router.push(
 																{
 																	pathname: router.pathname,
@@ -738,36 +734,38 @@ export const ShowOverviewCompose = ({
 														variant="outline"
 														size="sm"
 														onClick={() => {
-															// Use enriched container data for consistent routing
-															// Ensure container has required properties before routing
-															if (!container?.containerId) {
+															// Enhanced container validation and routing
+															if (!container?.containerId || !container?.name) {
 																console.warn(
 																	"Invalid container for monitoring:",
 																	container,
 																);
 																return;
 															}
+
+															// Preserve all existing query parameters
 															const query = {
 																...router.query,
 																tab: "monitoring",
 																containerId: container.containerId,
+																containerName: container.name, // Add container name for better context
 															};
+
+															// Enhanced debug logging
 															console.debug("Routing to monitoring:", {
 																query,
 																container: {
+																	id: container.containerId,
 																	name: container.name,
 																	state: container.state,
 																	health: container.health?.Status,
-																	uptime: container.startedAt
-																		? formatDistanceToNow(
-																				new Date(container.startedAt),
-																				{
-																					addSuffix: true,
-																				},
-																			)
-																		: undefined,
+																	startedAt: container.startedAt,
 																},
+																currentPath: router.pathname,
+																currentQuery: router.query,
 															});
+
+															// Use consistent routing with query preservation
 															void router.push(
 																{
 																	pathname: router.pathname,
