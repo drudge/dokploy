@@ -621,7 +621,9 @@ export const ShowOverviewCompose = ({
 										Failed to fetch container details. Please try again.
 									</TableCell>
 								</TableRow>
-							) : isLoadingServices || isLoadingContainers || isLoadingConfigs ? (
+							) : isLoadingServices ||
+								isLoadingContainers ||
+								isLoadingConfigs ? (
 								<TableRow>
 									<TableCell colSpan={5} className="h-24 text-center">
 										<div className="flex flex-col items-center justify-center gap-2">
@@ -671,32 +673,40 @@ export const ShowOverviewCompose = ({
 														variant="outline"
 														size="sm"
 														onClick={() => {
-															// Enhanced container validation and routing
-															if (!container?.containerId || !container?.name) {
+															// Use the selected container from the row
+															const selectedContainer = enrichedContainers.find(
+																(c) => c.containerId === container.containerId
+															);
+
+															if (!selectedContainer?.containerId || !selectedContainer?.name) {
 																console.warn(
 																	"Invalid container for logs:",
-																	container,
+																	selectedContainer,
 																);
 																return;
 															}
+
+															// Update container selection state
+															setContainerAppName(selectedContainer.name);
+															setContainerId(selectedContainer.containerId);
 
 															// Preserve all existing query parameters
 															const query = {
 																...router.query,
 																tab: "logs",
-																containerId: container.containerId,
-																containerName: container.name, // Add container name for better context
+																containerId: selectedContainer.containerId,
+																containerName: selectedContainer.name,
 															};
 
 															// Enhanced debug logging
 															console.debug("Routing to logs:", {
 																query,
-																container: {
-																	id: container.containerId,
-																	name: container.name,
-																	state: container.state,
-																	health: container.health?.Status,
-																	startedAt: container.startedAt,
+																selectedContainer: {
+																	id: selectedContainer.containerId,
+																	name: selectedContainer.name,
+																	state: selectedContainer.state,
+																	health: selectedContainer.health?.Status,
+																	startedAt: selectedContainer.startedAt,
 																},
 																currentPath: router.pathname,
 																currentQuery: router.query,
@@ -720,32 +730,40 @@ export const ShowOverviewCompose = ({
 														variant="outline"
 														size="sm"
 														onClick={() => {
-															// Enhanced container validation and routing
-															if (!container?.containerId || !container?.name) {
+															// Use the selected container from the row
+															const selectedContainer = enrichedContainers.find(
+																(c) => c.containerId === container.containerId
+															);
+
+															if (!selectedContainer?.containerId || !selectedContainer?.name) {
 																console.warn(
 																	"Invalid container for monitoring:",
-																	container,
+																	selectedContainer,
 																);
 																return;
 															}
+
+															// Update container selection state
+															setContainerAppName(selectedContainer.name);
+															setContainerId(selectedContainer.containerId);
 
 															// Preserve all existing query parameters
 															const query = {
 																...router.query,
 																tab: "monitoring",
-																containerId: container.containerId,
-																containerName: container.name, // Add container name for better context
+																containerId: selectedContainer.containerId,
+																containerName: selectedContainer.name,
 															};
 
 															// Enhanced debug logging
 															console.debug("Routing to monitoring:", {
 																query,
-																container: {
-																	id: container.containerId,
-																	name: container.name,
-																	state: container.state,
-																	health: container.health?.Status,
-																	startedAt: container.startedAt,
+																selectedContainer: {
+																	id: selectedContainer.containerId,
+																	name: selectedContainer.name,
+																	state: selectedContainer.state,
+																	health: selectedContainer.health?.Status,
+																	startedAt: selectedContainer.startedAt,
 																},
 																currentPath: router.pathname,
 																currentQuery: router.query,
