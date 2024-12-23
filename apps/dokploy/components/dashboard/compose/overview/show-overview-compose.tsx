@@ -96,63 +96,9 @@ interface HealthStatusProps {
 	state: string;
 }
 
-const HealthStatusBadge = memo(({ health, name, state }: HealthStatusProps): JSX.Element => {
-	type BadgeVariant =
-		| "default"
-		| "destructive"
-		| "secondary"
-		| "red"
-		| "yellow"
-		| "orange"
-		| "green"
-		| "blue"
-		| "blank"
-		| "outline";
-
-	interface BadgeInfo {
-		variant: BadgeVariant;
-		className: string | undefined;
-		label: string;
-		tooltip: string;
-	}
-
-	const badgeInfo = useMemo((): BadgeInfo => {
-		// Enhanced health status processing with validation
-		const healthStatus = health?.Status?.toLowerCase() ?? null;
-		const hasHealth = !!health?.Status;
-		const failingStreak = health?.FailingStreak ?? 0;
-		const healthLogs = health?.Log ?? [];
-		const lastLog = healthLogs[0];
-
-		console.debug(`Health status for ${name}:`, {
-			status: healthStatus,
-			hasHealth,
-			failingStreak,
-			logCount: healthLogs.length,
-			rawHealth: health,
-			containerState: state,
-		});
-
-		// Build detailed tooltip information
-		const tooltipParts: string[] = [];
-		if (hasHealth) {
-			tooltipParts.push(`Status: ${health?.Status}`);
-			if (failingStreak > 0) {
-				tooltipParts.push(`Failing Streak: ${failingStreak}`);
-			}
-			if (lastLog) {
-				tooltipParts.push(
-					`Last Check: ${new Date(lastLog.Start).toLocaleString()}`,
-					`Exit Code: ${lastLog.ExitCode}`,
-					`Output: ${lastLog.Output}`,
-				);
-			}
-		} else {
-			tooltipParts.push("No health check configured");
-		}
-
-		// Determine badge variant and class based on health status
-		let variant:
+const HealthStatusBadge = memo(
+	({ health, name, state }: HealthStatusProps): JSX.Element => {
+		type BadgeVariant =
 			| "default"
 			| "destructive"
 			| "secondary"
@@ -162,48 +108,104 @@ const HealthStatusBadge = memo(({ health, name, state }: HealthStatusProps): JSX
 			| "green"
 			| "blue"
 			| "blank"
-			| "outline" = "secondary";
-		let className: string | undefined;
-		// Initialize displayLabel with a default value
-		let displayLabel: string = "No health check";
-		let currentVariant: BadgeVariant = "secondary";
-		let currentClassName: string | undefined = undefined;
+			| "outline";
 
-		if (hasHealth && health?.Status) {
-			displayLabel = health.Status;
-
-			if (healthStatus === "healthy") {
-				currentVariant = "green";
-			} else if (healthStatus === "unhealthy") {
-				currentVariant = "red";
-				if (failingStreak > 0) {
-					displayLabel = `Unhealthy (${failingStreak} fails)`;
-				}
-			} else if (healthStatus === "starting") {
-				currentVariant = "yellow";
-				displayLabel = "Starting";
-			}
+		interface BadgeInfo {
+			variant: BadgeVariant;
+			className: string | undefined;
+			label: string;
+			tooltip: string;
 		}
 
-		// Ensure all returned values are properly typed
-		const result: BadgeInfo = {
-			variant: currentVariant,
-			className: currentClassName,
-			label: displayLabel,
-			tooltip: tooltipParts.join("\n"),
-		};
+		const badgeInfo = useMemo((): BadgeInfo => {
+			// Enhanced health status processing with validation
+			const healthStatus = health?.Status?.toLowerCase() ?? null;
+			const hasHealth = !!health?.Status;
+			const failingStreak = health?.FailingStreak ?? 0;
+			const healthLogs = health?.Log ?? [];
+			const lastLog = healthLogs[0];
 
-		return result;
-	}, [health, name, state]);
+			console.debug(`Health status for ${name}:`, {
+				status: healthStatus,
+				hasHealth,
+				failingStreak,
+				logCount: healthLogs.length,
+				rawHealth: health,
+				containerState: state,
+			});
 
-	const { variant, className, label, tooltip } = badgeInfo;
+			// Build detailed tooltip information
+			const tooltipParts: string[] = [];
+			if (hasHealth) {
+				tooltipParts.push(`Status: ${health?.Status}`);
+				if (failingStreak > 0) {
+					tooltipParts.push(`Failing Streak: ${failingStreak}`);
+				}
+				if (lastLog) {
+					tooltipParts.push(
+						`Last Check: ${new Date(lastLog.Start).toLocaleString()}`,
+						`Exit Code: ${lastLog.ExitCode}`,
+						`Output: ${lastLog.Output}`,
+					);
+				}
+			} else {
+				tooltipParts.push("No health check configured");
+			}
 
-	return (
-		<Badge variant={variant} className={className} title={tooltip}>
-			{label}
-		</Badge>
-	);
-});
+			// Determine badge variant and class based on health status
+			const variant:
+				| "default"
+				| "destructive"
+				| "secondary"
+				| "red"
+				| "yellow"
+				| "orange"
+				| "green"
+				| "blue"
+				| "blank"
+				| "outline" = "secondary";
+			let className: string | undefined;
+			// Initialize displayLabel with a default value
+			let displayLabel = "No health check";
+			let currentVariant: BadgeVariant = "secondary";
+			const currentClassName: string | undefined = undefined;
+
+			if (hasHealth && health?.Status) {
+				displayLabel = health.Status;
+
+				if (healthStatus === "healthy") {
+					currentVariant = "green";
+				} else if (healthStatus === "unhealthy") {
+					currentVariant = "red";
+					if (failingStreak > 0) {
+						displayLabel = `Unhealthy (${failingStreak} fails)`;
+					}
+				} else if (healthStatus === "starting") {
+					currentVariant = "yellow";
+					displayLabel = "Starting";
+				}
+			}
+
+			// Ensure all returned values are properly typed
+			const result: BadgeInfo = {
+				variant: currentVariant,
+				className: currentClassName,
+				label: displayLabel,
+				tooltip: tooltipParts.join("\n"),
+			};
+
+			return result;
+		}, [health, name, state]);
+
+		const { variant, className, label, tooltip } = badgeInfo;
+
+		return (
+			<Badge variant={variant} className={className} title={tooltip}>
+				{label}
+			</Badge>
+		);
+	},
+);
 
 interface UptimeDisplayProps {
 	startedAt: string | undefined;
@@ -212,87 +214,87 @@ interface UptimeDisplayProps {
 	health: ContainerHealth | undefined;
 }
 
-const UptimeDisplay = memo(({ startedAt, name, state, health }: UptimeDisplayProps) => {
-	const { displayText, tooltip } = useMemo(() => {
-		try {
-			if (!startedAt) {
-				console.debug(`No startedAt for container ${name}:`, {
-					state,
-					health: health?.Status,
-				});
-				return { displayText: "-", tooltip: "No start time available" };
-			}
+const UptimeDisplay = memo(
+	({ startedAt, name, state, health }: UptimeDisplayProps) => {
+		const { displayText, tooltip } = useMemo(() => {
+			try {
+				if (!startedAt) {
+					console.debug(`No startedAt for container ${name}:`, {
+						state,
+						health: health?.Status,
+					});
+					return { displayText: "-", tooltip: "No start time available" };
+				}
 
-			const startDate = new Date(startedAt);
-			if (Number.isNaN(startDate.getTime())) {
-				console.warn(`Invalid startedAt date for ${name}:`, {
-					startedAt,
-					state,
-					health: health?.Status,
-				});
-				return { displayText: "-", tooltip: "Invalid start time" };
-			}
+				const startDate = new Date(startedAt);
+				if (Number.isNaN(startDate.getTime())) {
+					console.warn(`Invalid startedAt date for ${name}:`, {
+						startedAt,
+						state,
+						health: health?.Status,
+					});
+					return { displayText: "-", tooltip: "Invalid start time" };
+				}
 
-			const now = new Date();
-			if (startDate > now) {
-				console.warn(`Future startedAt date for ${name}:`, {
+				const now = new Date();
+				if (startDate > now) {
+					console.warn(`Future startedAt date for ${name}:`, {
+						startedAt,
+						now: now.toISOString(),
+						diff: startDate.getTime() - now.getTime(),
+						state,
+						health: health?.Status,
+					});
+					return { displayText: "-", tooltip: "Invalid future start time" };
+				}
+
+				const formattedUptime = formatDistanceToNow(startDate, {
+					addSuffix: true,
+					includeSeconds: true,
+				});
+
+				// Enhanced state-aware uptime display
+				const normalizedState = state?.toLowerCase();
+				const isRunning = normalizedState === "running";
+				const displayUptime = isRunning
+					? formattedUptime
+					: `${normalizedState?.charAt(0).toUpperCase()}${normalizedState?.slice(1)} ${formattedUptime}`;
+
+				const tooltipInfo = [
+					`Started: ${startDate.toLocaleString()}`,
+					`State: ${state}`,
+					health?.Status ? `Health: ${health.Status}` : "No health check",
+				].join("\n");
+
+				console.debug(`Uptime for ${name}:`, {
 					startedAt,
+					parsedStartDate: startDate.toISOString(),
+					uptime: formattedUptime,
+					displayUptime,
 					now: now.toISOString(),
-					diff: startDate.getTime() - now.getTime(),
 					state,
 					health: health?.Status,
 				});
-				return { displayText: "-", tooltip: "Invalid future start time" };
+
+				return { displayText: displayUptime, tooltip: tooltipInfo };
+			} catch (error) {
+				console.error(`Error formatting uptime for ${name}:`, {
+					error,
+					startedAt,
+					state,
+					health: health?.Status,
+				});
+				return { displayText: "-", tooltip: "Error calculating uptime" };
 			}
+		}, [startedAt, name, state, health]);
 
-			const formattedUptime = formatDistanceToNow(startDate, {
-				addSuffix: true,
-				includeSeconds: true,
-			});
-
-			// Enhanced state-aware uptime display
-			const normalizedState = state?.toLowerCase();
-			const isRunning = normalizedState === "running";
-			const displayUptime = isRunning
-				? formattedUptime
-				: `${normalizedState?.charAt(0).toUpperCase()}${normalizedState?.slice(1)} ${formattedUptime}`;
-
-			const tooltipInfo = [
-				`Started: ${startDate.toLocaleString()}`,
-				`State: ${state}`,
-				health?.Status
-					? `Health: ${health.Status}`
-					: "No health check",
-			].join("\n");
-
-			console.debug(`Uptime for ${name}:`, {
-				startedAt,
-				parsedStartDate: startDate.toISOString(),
-				uptime: formattedUptime,
-				displayUptime,
-				now: now.toISOString(),
-				state,
-				health: health?.Status,
-			});
-
-			return { displayText: displayUptime, tooltip: tooltipInfo };
-		} catch (error) {
-			console.error(`Error formatting uptime for ${name}:`, {
-				error,
-				startedAt,
-				state,
-				health: health?.Status,
-			});
-			return { displayText: "-", tooltip: "Error calculating uptime" };
-		}
-	}, [startedAt, name, state, health]);
-
-	return (
-		<div className="text-sm text-muted-foreground" title={tooltip}>
-			{displayText}
-		</div>
-	);
-});
+		return (
+			<div className="text-sm text-muted-foreground" title={tooltip}>
+				{displayText}
+			</div>
+		);
+	},
+);
 
 export const ShowOverviewCompose = ({
 	composeId,
@@ -338,7 +340,11 @@ export const ShowOverviewCompose = ({
 			serverId: serverId || "",
 		},
 		{
-			enabled: Boolean(serverId) && serverId !== "null" && Boolean(appName) && Boolean(composeId),
+			enabled:
+				Boolean(serverId) &&
+				serverId !== "null" &&
+				Boolean(appName) &&
+				Boolean(composeId),
 			refetchInterval: 5000,
 			retry: 3,
 			onError(error) {
@@ -351,16 +357,16 @@ export const ShowOverviewCompose = ({
 			onSuccess(data) {
 				console.debug("Successfully fetched container details:", {
 					containerCount: data.length,
-					containers: data.map(c => ({
+					containers: data.map((c) => ({
 						name: c.name,
 						id: c.containerId,
-						state: c.state
+						state: c.state,
 					})),
 					query: {
 						serverId,
 						appName,
-						appType
-					}
+						appType,
+					},
 				});
 			},
 		},
@@ -395,10 +401,11 @@ export const ShowOverviewCompose = ({
 			containerIds,
 		},
 		{
-			enabled: Boolean(serverId) && 
-				serverId !== "null" && 
-				Boolean(appName) && 
-				Boolean(composeId) && 
+			enabled:
+				Boolean(serverId) &&
+				serverId !== "null" &&
+				Boolean(appName) &&
+				Boolean(composeId) &&
 				containerIds.length > 0,
 			refetchInterval: 5000,
 			retry: 3,
@@ -412,8 +419,8 @@ export const ShowOverviewCompose = ({
 						serverId,
 						appName,
 						appType,
-						containerIds
-					}
+						containerIds,
+					},
 				});
 			},
 			onSuccess(data) {
@@ -430,8 +437,8 @@ export const ShowOverviewCompose = ({
 						serverId,
 						appName,
 						appType,
-						containerIds
-					}
+						containerIds,
+					},
 				});
 			},
 		},
@@ -455,7 +462,9 @@ export const ShowOverviewCompose = ({
 
 		const containers = containerDetails
 			.map((detail) => {
-				const config = containerConfigs?.find((c) => c.Id === detail.containerId);
+				const config = containerConfigs?.find(
+					(c) => c.Id === detail.containerId,
+				);
 
 				const enrichedContainer = {
 					name: detail.name,
@@ -466,7 +475,7 @@ export const ShowOverviewCompose = ({
 								Status: config.State.Health.Status,
 								FailingStreak: config.State.Health.FailingStreak,
 								Log: config.State.Health.Log,
-						  }
+							}
 						: undefined,
 					startedAt: config?.State?.StartedAt
 						? new Date(config.State.StartedAt).toISOString()
@@ -486,7 +495,13 @@ export const ShowOverviewCompose = ({
 			});
 
 		return containers;
-	}, [containerDetails, containerConfigs, isLoadingServices, isLoadingContainers, isLoadingConfigs]);
+	}, [
+		containerDetails,
+		containerConfigs,
+		isLoadingServices,
+		isLoadingContainers,
+		isLoadingConfigs,
+	]);
 
 	const [containerAppName, setContainerAppName] = useState<string>();
 	const [containerId, setContainerId] = useState<string>();
@@ -503,7 +518,7 @@ export const ShowOverviewCompose = ({
 		(value: string) => {
 			console.debug("Container selection changed:", { value });
 			const container = enrichedContainers.find((c) => c.name === value);
-			
+
 			if (!container?.containerId || !container?.name) {
 				console.warn("Invalid container selected:", { value, container });
 				return;
@@ -909,9 +924,14 @@ export const ShowOverviewCompose = ({
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{((): React.ReactElement => {
-								// Ensure consistent hook rendering order
-								if (containerError) {
+							{/* Pre-calculate container states to avoid hook ordering issues */}
+							{(() => {
+								// Handle error states
+								if (containerError || containerConfigError) {
+									console.error("Error fetching container data:", {
+										containerError,
+										configError: containerConfigError,
+									});
 									return (
 										<TableRow>
 											<TableCell
@@ -924,12 +944,17 @@ export const ShowOverviewCompose = ({
 									);
 								}
 
-								// Show loading state only during initial load
+								// Show loading state during any loading phase
 								if (
 									isLoadingServices ||
 									isLoadingContainers ||
 									isLoadingConfigs
 								) {
+									console.debug("Loading container data...", {
+										services: isLoadingServices,
+										containers: isLoadingContainers,
+										configs: isLoadingConfigs,
+									});
 									return (
 										<TableRow>
 											<TableCell colSpan={5} className="h-24 text-center">
@@ -944,88 +969,95 @@ export const ShowOverviewCompose = ({
 									);
 								}
 
-								if (enrichedContainers.length === 0) {
+								// Show empty state if no containers found
+								if (!enrichedContainers?.length) {
+									console.debug("No containers found");
 									return (
 										<TableRow>
 											<TableCell colSpan={5} className="h-24 text-center">
-												No containers found
+												<div className="text-sm text-muted-foreground">
+													No containers found
+												</div>
 											</TableCell>
 										</TableRow>
 									);
 								}
 
+								// Pre-calculate all container states
+								const containerStates = enrichedContainers.map((container) => ({
+									...container,
+									status: mapContainerStateToStatus(
+										container.state,
+										container.health,
+									),
+									isSelected: container.containerId === containerId,
+								}));
+
+								// Render container list with pre-calculated states
 								return (
 									<>
-										{enrichedContainers.map((container) => {
-											const isSelected = container.containerId === containerId;
-											return (
-												<TableRow
-													key={container.containerId}
-													className={isSelected ? "bg-muted/50" : ""}
-													onClick={() => handleContainerSelect(container.name)}
-													style={{ cursor: "pointer" }}
-												>
-													<TableCell className="font-medium">
-														{container.name}
-													</TableCell>
-													<TableCell>
-														<StatusTooltip
-															status={mapContainerStateToStatus(
-																container.state,
-																container.health,
-															)}
-														/>
-													</TableCell>
-													<TableCell>
-														<HealthStatusBadge
-															health={container.health}
-															name={container.name}
-															state={container.state}
-														/>
-													</TableCell>
-													<TableCell>
-														<UptimeDisplay
-															startedAt={container.startedAt}
-															name={container.name}
-															state={container.state}
-															health={container.health}
-														/>
-													</TableCell>
-													<TableCell className="text-right">
-														<div className="flex justify-end gap-2">
-															<Button
-																variant="outline"
-																size="sm"
-																onClick={() => handleViewLogs(container)}
-																disabled={!container?.containerId}
-																title={
-																	container?.containerId
-																		? "View container logs"
-																		: "Container ID not available"
-																}
-															>
-																<FileText className="h-4 w-4 mr-2" />
-																Logs
-															</Button>
-															<Button
-																variant="outline"
-																size="sm"
-																onClick={() => handleViewMonitoring(container)}
-																disabled={!container?.containerId}
-																title={
-																	container?.containerId
-																		? "View container monitoring"
-																		: "Container ID not available"
-																}
-															>
-																<ExternalLink className="h-4 w-4 mr-2" />
-																Monitor
-															</Button>
-														</div>
-													</TableCell>
-												</TableRow>
-											);
-										})}
+										{containerStates.map((container) => (
+											<TableRow
+												key={container.containerId}
+												className={container.isSelected ? "bg-muted/50" : ""}
+												onClick={() => handleContainerSelect(container.name)}
+												style={{ cursor: "pointer" }}
+											>
+												<TableCell className="font-medium">
+													{container.name}
+												</TableCell>
+												<TableCell>
+													<StatusTooltip status={container.status} />
+												</TableCell>
+												<TableCell>
+													<HealthStatusBadge
+														health={container.health}
+														name={container.name}
+														state={container.state}
+													/>
+												</TableCell>
+												<TableCell>
+													<UptimeDisplay
+														startedAt={container.startedAt}
+														name={container.name}
+														state={container.state}
+														health={container.health}
+													/>
+												</TableCell>
+												<TableCell className="text-right">
+													<div className="flex justify-end gap-2">
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() => handleViewLogs(container)}
+															disabled={!container?.containerId}
+															title={
+																container?.containerId
+																	? "View container logs"
+																	: "Container ID not available"
+															}
+														>
+															<FileText className="h-4 w-4 mr-2" />
+															Logs
+														</Button>
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() => handleViewMonitoring(container)}
+															disabled={!container?.containerId}
+															title={
+																container?.containerId
+																	? "View container monitoring"
+																	: "Container ID not available"
+															}
+														>
+															<ExternalLink className="h-4 w-4 mr-2" />
+															Monitor
+														</Button>
+													</div>
+												</TableCell>
+											</TableRow>
+										))}
 									</>
 								);
 							})()}
