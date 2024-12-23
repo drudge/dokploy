@@ -21,6 +21,13 @@ export interface Template {
 		content?: string;
 	}[];
 	domains?: DomainSchema[];
+	networkName?: string;
+	containerNames?: {
+		[key: string]: string;
+	};
+	volumeNames?: {
+		[key: string]: string;
+	};
 }
 
 export const generateRandomDomain = ({
