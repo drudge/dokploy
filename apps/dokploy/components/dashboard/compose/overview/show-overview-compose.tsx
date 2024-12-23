@@ -498,27 +498,30 @@ export const ShowOverviewCompose = ({
 	}, [containerDetails, containerConfigs]);
 
 	// Move selectContainer to useCallback for consistent hook ordering
-	const selectContainer = useCallback((container: Container) => {
-		console.debug("Selecting container:", {
-			name: container.name,
-			containerId: container.containerId,
-		});
+	const selectContainer = useCallback(
+		(container: Container) => {
+			console.debug("Selecting container:", {
+				name: container.name,
+				containerId: container.containerId,
+			});
 
-		setContainerAppName(container.name);
-		setContainerId(container.containerId);
+			setContainerAppName(container.name);
+			setContainerId(container.containerId);
 
-		void router.push(
-			{
-				pathname: router.pathname,
-				query: {
-					...router.query,
-					containerId: container.containerId,
+			void router.push(
+				{
+					pathname: router.pathname,
+					query: {
+						...router.query,
+						containerId: container.containerId,
+					},
 				},
-			},
-			undefined,
-			{ shallow: true },
-		);
-	}, [router]);
+				undefined,
+				{ shallow: true },
+			);
+		},
+		[router],
+	);
 
 	// Container selection effect with proper hook dependencies
 	useEffect(() => {
