@@ -371,9 +371,10 @@ export const ShowOverviewCompose = ({
 			{
 				composeId,
 				type: "fetch",
+				serverId: serverId || "",
 			},
 			{
-				enabled: !!serverId && !!appName,
+				enabled: !!serverId && serverId !== "null" && !!composeId,
 				refetchInterval: 5000,
 				retry: 3,
 				onError(error) {
@@ -392,10 +393,10 @@ export const ShowOverviewCompose = ({
 		{
 			appName,
 			appType,
-			serverId,
+			serverId: serverId || "",
 		},
 		{
-			enabled: !!serverId && !!appName && !!composeId && serverId !== "null",
+			enabled: !!serverId && serverId !== "null" && !!appName && !!composeId,
 			refetchInterval: 5000,
 			retry: 3,
 			onError(error) {
@@ -434,11 +435,11 @@ export const ShowOverviewCompose = ({
 		{
 			appName,
 			appType,
-			serverId,
+			serverId: serverId || "",
 			containerIds,
 		},
 		{
-			enabled: !!serverId && !!appName && containerIds.length > 0,
+			enabled: !!serverId && serverId !== "null" && !!appName && !!composeId,
 			refetchInterval: 5000,
 			retry: 3,
 			onError(error) {
@@ -842,7 +843,7 @@ export const ShowOverviewCompose = ({
 				<div className="flex flex-row gap-4 mb-4">
 					<Select
 						onValueChange={useCallback(
-							(value) => {
+							(value: string) => {
 								console.debug("Container selection changed:", { value });
 								const container = enrichedContainers.find(
 									(c) => c.name === value,
@@ -926,10 +927,7 @@ export const ShowOverviewCompose = ({
 								}
 
 								// Show loading state only during initial load
-								if (
-									(!services || !containerDetails || !containerConfigs) &&
-									(isLoadingServices || isLoadingContainers || isLoadingConfigs)
-								) {
+								if (isLoadingServices || isLoadingContainers || isLoadingConfigs) {
 									return (
 										<TableRow>
 											<TableCell colSpan={5} className="h-24 text-center">
