@@ -460,21 +460,20 @@ export const ShowOverviewCompose = ({
 		);
 	}, [containerDetails]);
 
+	// Optimize container enrichment to prevent unnecessary updates
 	const enrichedContainers = useMemo((): Container[] => {
-		return validContainers.map(
+		// Skip processing during loading states
+		if (isLoadingServices || isLoadingContainers || isLoadingConfigs) {
+			return [];
+		}
+
+		const containers = validContainers.map(
 			(
 				detail: RouterOutputs["docker"]["getContainersByAppNameMatch"][number],
 			): Container => {
 				const config = containerConfigs.find(
 					(c: ContainerConfig) => c.Id === detail.containerId,
 				);
-
-				console.debug(`Processing container ${detail.name}:`, {
-					containerId: detail.containerId,
-					hasConfig: !!config,
-					startedAt: config?.State?.StartedAt,
-					health: config?.State?.Health?.Status,
-				});
 
 				// Enhanced container data with strict validation
 				const enrichedContainer = {
@@ -486,16 +485,33 @@ export const ShowOverviewCompose = ({
 				};
 
 				// Log container enrichment for debugging
-				console.debug(`Enriched container ${detail.name}:`, {
+				console.debug(`Container ${detail.name} state:`, {
 					...enrichedContainer,
 					hasHealth: !!enrichedContainer.health,
 					hasStartedAt: !!enrichedContainer.startedAt,
+					isValid: !!(detail.name && detail.containerId && detail.state),
 				});
 
 				return enrichedContainer;
 			},
 		);
-	}, [containerDetails, containerConfigs]);
+
+		// Log overall container processing results
+		console.debug("Processed containers:", {
+			totalCount: containers.length,
+			withHealth: containers.filter(c => !!c.health).length,
+			withStartTime: containers.filter(c => !!c.startedAt).length,
+			states: containers.map(c => c.state),
+		});
+
+		return containers;
+	}, [
+		validContainers,
+		containerConfigs,
+		isLoadingServices,
+		isLoadingContainers,
+		isLoadingConfigs,
+	]);
 
 	// Move selectContainer to useCallback for consistent hook ordering
 	const selectContainer = useCallback(
@@ -523,27 +539,32 @@ export const ShowOverviewCompose = ({
 		[router],
 	);
 
-	// Container selection effect with proper hook dependencies
+	// Container selection effect with optimized dependencies and loading handling
 	useEffect(() => {
+		// Skip selection during loading states to prevent unnecessary updates
+		if (isLoadingServices || isLoadingContainers || isLoadingConfigs) {
+			return;
+		}
+
+		// Wait for containers to be available
 		if (!enrichedContainers.length) {
 			console.debug("No containers available yet");
 			return;
 		}
 
-		// Try to select container from query ID first
-		if (router.query.containerId) {
-			const container = enrichedContainers.find(
-				(c) => c.containerId === router.query.containerId,
-			);
-			if (container) {
-				selectContainer(container);
-				return;
+		const attemptContainerSelection = () => {
+			// Try to select container from query ID first
+			if (router.query.containerId) {
+				const container = enrichedContainers.find(
+					(c) => c.containerId === router.query.containerId,
+				);
+				if (container) {
+					selectContainer(container);
+					return true;
+				}
 			}
-		}
 
-		// Fall back to first container if no match or no query ID
-		if (enrichedContainers.length > 0) {
-			// Ensure container exists and has required properties
+			// Fall back to first container if no match or no query ID
 			const firstContainer = enrichedContainers[0];
 			if (firstContainer?.name && firstContainer?.containerId) {
 				console.debug("Selecting first container:", {
@@ -551,16 +572,26 @@ export const ShowOverviewCompose = ({
 					containerId: firstContainer.containerId,
 				});
 				selectContainer(firstContainer);
-			} else {
-				console.warn(
-					"First container is missing required properties:",
-					firstContainer,
-				);
+				return true;
 			}
-		} else {
-			console.debug("No containers available for selection");
+
+			return false;
+		};
+
+		if (!attemptContainerSelection()) {
+			console.warn("Failed to select any container:", {
+				queryId: router.query.containerId,
+				availableContainers: enrichedContainers.map(c => ({ id: c.containerId, name: c.name })),
+			});
 		}
-	}, [enrichedContainers, router.query, selectContainer]);
+	}, [
+		enrichedContainers,
+		router.query.containerId,
+		selectContainer,
+		isLoadingServices,
+		isLoadingContainers,
+		isLoadingConfigs,
+	]);
 
 	// Map container state and health to status with proper typing and detailed logging
 	const mapContainerStateToStatus = (
@@ -767,10 +798,10 @@ export const ShowOverviewCompose = ({
 									);
 								}
 
+								// Show loading state only during initial load
 								if (
-									isLoadingServices ||
-									isLoadingContainers ||
-									isLoadingConfigs
+									(!services || !containerDetails || !containerConfigs) &&
+									(isLoadingServices || isLoadingContainers || isLoadingConfigs)
 								) {
 									return (
 										<TableRow>
@@ -778,9 +809,7 @@ export const ShowOverviewCompose = ({
 												<div className="flex flex-col items-center justify-center gap-2">
 													<Loader2 className="h-6 w-6 animate-spin" />
 													<div className="text-sm text-muted-foreground">
-														{isLoadingServices && "Loading services..."}
-														{isLoadingContainers && "Loading containers..."}
-														{isLoadingConfigs && "Loading container details..."}
+														Loading container information...
 													</div>
 												</div>
 											</TableCell>
