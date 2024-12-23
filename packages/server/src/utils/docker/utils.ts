@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import type { Readable } from "node:stream";
 import { docker, paths } from "@dokploy/server/constants";
 import type { ContainerInfo, ResourceRequirements } from "dockerode";
@@ -465,6 +466,10 @@ export const createFile = async (
 };
 export const encodeBase64 = (content: string) =>
 	Buffer.from(content, "utf-8").toString("base64");
+
+export const generateBase64 = (length: number): string => {
+	return crypto.randomBytes(length).toString("base64").slice(0, length);
+};
 
 export const getCreateFileCommand = (
 	outputPath: string,
