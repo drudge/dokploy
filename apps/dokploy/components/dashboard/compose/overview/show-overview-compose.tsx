@@ -1,16 +1,8 @@
-import { formatDistanceToNow } from "date-fns";
-import { Loader2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { StatusTooltip } from "../../../../components/shared/status-tooltip";
-import { Badge } from "../../../../components/ui/badge";
-import { Button } from "../../../../components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "../../../../components/ui/card";
-import { ScrollArea } from "../../../../components/ui/scroll-area";
+import { StatusTooltip } from "@/components/shared/status-tooltip";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
 	Select,
 	SelectContent,
@@ -19,7 +11,7 @@ import {
 	SelectLabel,
 	SelectTrigger,
 	SelectValue,
-} from "../../../../components/ui/select";
+} from "@/components/ui/select";
 import {
 	Table,
 	TableBody,
@@ -27,8 +19,12 @@ import {
 	TableHead,
 	TableHeader,
 	TableRow,
-} from "../../../../components/ui/table";
-import { api } from "../../../../utils/api";
+} from "@/components/ui/table";
+import { api } from "@/utils/api";
+import type { RouterInputs, RouterOutputs } from "@/utils/api";
+import { formatDistanceToNow } from "date-fns";
+import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type DockerContainerState =
 	| "running"
@@ -87,9 +83,11 @@ interface Props {
 	appType: "docker-compose" | "stack";
 }
 
+import { TRPCClientError } from "@trpc/client";
 import { ExternalLink, FileText } from "lucide-react";
 import { useRouter } from "next/router";
-import React, { memo } from "react";
+import type React from "react";
+import { memo } from "react";
 
 // Separate components for better organization and hook consistency
 const HealthStatusBadge = memo(({ container }: { container: Container }) => {
@@ -129,21 +127,30 @@ const HealthStatusBadge = memo(({ container }: { container: Container }) => {
 		}
 
 		// Determine badge variant and class based on health status
-		let variant: "default" | "destructive" | "secondary" | "warning" =
-			"secondary";
+		let variant:
+			| "default"
+			| "destructive"
+			| "secondary"
+			| "red"
+			| "yellow"
+			| "orange"
+			| "green"
+			| "blue"
+			| "blank"
+			| "outline" = "secondary";
 		let className: string | undefined;
 		let label = hasHealth ? container.health?.Status : "No health check";
 
 		if (healthStatus === "healthy") {
-			variant = "default";
-			className = "bg-green-500 hover:bg-green-500/90";
+			variant = "green";
+			className = undefined; // Using predefined green variant styles
 		} else if (healthStatus === "unhealthy") {
-			variant = "destructive";
+			variant = "red";
 			if (failingStreak > 0) {
 				label = `Unhealthy (${failingStreak} fails)`;
 			}
 		} else if (healthStatus === "starting") {
-			variant = "warning";
+			variant = "yellow";
 			label = "Starting";
 		}
 
@@ -251,7 +258,55 @@ export const ShowOverviewCompose = ({
 	const [containerAppName, setContainerAppName] = useState<string>();
 	const [containerId, setContainerId] = useState<string>();
 
+	// Container selection handler with consistent hook usage
+	const handleContainerSelect = useCallback(
+		(container: Container, targetTab: "logs" | "monitoring") => {
+			if (!container?.containerId || !container?.name) {
+				console.warn(`Invalid container for ${targetTab}:`, container);
+				return;
+			}
+
+			// Update container selection state
+			setContainerAppName(container.name);
+			setContainerId(container.containerId);
+
+			// Preserve all existing query parameters
+			const query = {
+				...router.query,
+				tab: targetTab,
+				containerId: container.containerId,
+				containerName: container.name,
+			};
+
+			// Enhanced debug logging
+			console.debug(`Routing to ${targetTab}:`, {
+				query,
+				selectedContainer: {
+					id: container.containerId,
+					name: container.name,
+					state: container.state,
+					health: container.health?.Status,
+					startedAt: container.startedAt,
+				},
+				currentPath: router.pathname,
+				currentQuery: router.query,
+			});
+
+			// Use consistent routing with query preservation
+			void router.push(
+				{
+					pathname: router.pathname,
+					query,
+				},
+				undefined,
+				{ shallow: true },
+			);
+		},
+		[router],
+	);
+
 	// Simplified services query with better error handling
+	// Use consistent hook placement and proper typing
 	const { data: services = [], isLoading: isLoadingServices } =
 		api.compose.loadServices.useQuery(
 			{
@@ -260,9 +315,9 @@ export const ShowOverviewCompose = ({
 			},
 			{
 				enabled: !!serverId && !!appName,
-				refetchInterval: 5000 as const, // Refresh every 5 seconds for real-time updates
+				refetchInterval: 5000,
 				retry: 3,
-				onError: (error) => {
+				onError(error) {
 					console.error("Failed to fetch services:", error);
 				},
 			},
@@ -281,17 +336,37 @@ export const ShowOverviewCompose = ({
 			serverId,
 		},
 		{
-			enabled: !!composeId,
-			refetchInterval: 5000 as const,
+			enabled: !!serverId && !!appName && !!composeId && serverId !== "null",
+			refetchInterval: 5000,
 			retry: 3,
-			onError: (error) => {
-				console.error("Failed to fetch container details:", error);
+			onError(error) {
+				console.error("Failed to fetch container details:", error, {
+					serverId,
+					appName,
+					composeId,
+				});
 			},
 		},
 	);
 	// Simplified query enabling - remove dependency on containerDetails.length
 	// Simplified query enabling logic to match monitoring tab pattern
 	// Enhanced container config query with better error handling and validation
+	// Move containerIds calculation to useMemo to prevent hook dependency issues
+	const containerIds = useMemo(() => {
+		return (
+			containerDetails
+				?.filter(
+					(
+						c: RouterOutputs["docker"]["getContainersByAppNameMatch"][number],
+					): c is NonNullable<typeof c> => !!c?.containerId,
+				)
+				.map(
+					(c: RouterOutputs["docker"]["getContainersByAppNameMatch"][number]) =>
+						c.containerId,
+				) || []
+		);
+	}, [containerDetails]);
+
 	const {
 		data: containerConfigs = [],
 		error: containerConfigError,
@@ -301,24 +376,21 @@ export const ShowOverviewCompose = ({
 			appName,
 			appType,
 			serverId,
-			containerIds:
-				containerDetails
-					?.filter((c): c is NonNullable<typeof c> => !!c?.containerId)
-					.map((c) => c.containerId) || [],
+			containerIds,
 		},
 		{
-			enabled: !!serverId && !!appName,
-			refetchInterval: 5000 as const,
+			enabled: !!serverId && !!appName && containerIds.length > 0,
+			refetchInterval: 5000,
 			retry: 3,
-			onError: (error) => {
+			onError(error) {
 				console.error("Failed to fetch container configs:", error, {
 					composeId,
 					serverId,
 					appName,
-					containerCount: containerDetails?.length,
+					containerCount: containerIds.length,
 				});
 			},
-			onSuccess: (data) => {
+			onSuccess(data) {
 				console.debug("Successfully fetched container configs:", {
 					configCount: data.length,
 					containers: data.map((config) => ({
@@ -364,15 +436,17 @@ export const ShowOverviewCompose = ({
 	};
 
 	// Enhanced container data processing with strict type checking and validation
-	const enrichedContainers = useMemo((): Container[] => {
-		// Allow processing even without configs, just with less data
+	// Split container processing into two steps to prevent hook dependency issues
+	const validContainers = useMemo(() => {
 		if (!containerDetails) {
 			console.debug("No container details available");
 			return [];
 		}
 
-		return containerDetails
-			.filter((detail): detail is NonNullable<typeof detail> => {
+		return containerDetails.filter(
+			(
+				detail: RouterOutputs["docker"]["getContainersByAppNameMatch"][number],
+			): detail is NonNullable<typeof detail> => {
 				const isValid = !!(
 					detail?.name &&
 					detail?.containerId &&
@@ -382,8 +456,15 @@ export const ShowOverviewCompose = ({
 					console.warn("Invalid container detail:", detail);
 				}
 				return isValid;
-			})
-			.map((detail): Container => {
+			},
+		);
+	}, [containerDetails]);
+
+	const enrichedContainers = useMemo((): Container[] => {
+		return validContainers.map(
+			(
+				detail: RouterOutputs["docker"]["getContainersByAppNameMatch"][number],
+			): Container => {
 				const config = containerConfigs.find(
 					(c: ContainerConfig) => c.Id === detail.containerId,
 				);
@@ -412,37 +493,39 @@ export const ShowOverviewCompose = ({
 				});
 
 				return enrichedContainer;
-			});
+			},
+		);
 	}, [containerDetails, containerConfigs]);
 
-	// Simplified container selection with stable hook ordering
+	// Move selectContainer to useCallback for consistent hook ordering
+	const selectContainer = useCallback((container: Container) => {
+		console.debug("Selecting container:", {
+			name: container.name,
+			containerId: container.containerId,
+		});
+
+		setContainerAppName(container.name);
+		setContainerId(container.containerId);
+
+		void router.push(
+			{
+				pathname: router.pathname,
+				query: {
+					...router.query,
+					containerId: container.containerId,
+				},
+			},
+			undefined,
+			{ shallow: true },
+		);
+	}, [router]);
+
+	// Container selection effect with proper hook dependencies
 	useEffect(() => {
 		if (!enrichedContainers.length) {
 			console.debug("No containers available yet");
 			return;
 		}
-
-		const selectContainer = (container: Container) => {
-			console.debug("Selecting container:", {
-				name: container.name,
-				containerId: container.containerId,
-			});
-
-			setContainerAppName(container.name);
-			setContainerId(container.containerId);
-
-			void router.push(
-				{
-					pathname: router.pathname,
-					query: {
-						...router.query,
-						containerId: container.containerId,
-					},
-				},
-				undefined,
-				{ shallow: true },
-			);
-		};
 
 		// Try to select container from query ID first
 		if (router.query.containerId) {
@@ -474,7 +557,7 @@ export const ShowOverviewCompose = ({
 		} else {
 			console.debug("No containers available for selection");
 		}
-	}, [enrichedContainers, router.query]);
+	}, [enrichedContainers, router.query, selectContainer]);
 
 	// Map container state and health to status with proper typing and detailed logging
 	const mapContainerStateToStatus = (
@@ -666,189 +749,111 @@ export const ShowOverviewCompose = ({
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{containerError ? (
-								<TableRow>
-									<TableCell
-										colSpan={5}
-										className="h-24 text-center text-destructive"
-									>
-										Failed to fetch container details. Please try again.
-									</TableCell>
-								</TableRow>
-							) : isLoadingServices ||
-								isLoadingContainers ||
-								isLoadingConfigs ? (
-								<TableRow>
-									<TableCell colSpan={5} className="h-24 text-center">
-										<div className="flex flex-col items-center justify-center gap-2">
-											<Loader2 className="h-6 w-6 animate-spin" />
-											<div className="text-sm text-muted-foreground">
-												{isLoadingServices && "Loading services..."}
-												{isLoadingContainers && "Loading containers..."}
-												{isLoadingConfigs && "Loading container details..."}
-											</div>
-										</div>
-									</TableCell>
-								</TableRow>
-							) : enrichedContainers.length === 0 ? (
-								<TableRow>
-									<TableCell colSpan={5} className="h-24 text-center">
-										No containers found
-									</TableCell>
-								</TableRow>
-							) : (
-								enrichedContainers.map((container) => {
-									const isSelected = container.containerId === containerId;
+							{((): React.ReactElement => {
+								// Ensure consistent hook rendering order
+								if (containerError) {
 									return (
-										<TableRow
-											key={container.containerId}
-											className={isSelected ? "bg-muted/50" : ""}
-										>
-											<TableCell className="font-medium">
-												{container.name}
+										<TableRow>
+											<TableCell
+												colSpan={5}
+												className="h-24 text-center text-destructive"
+											>
+												Failed to fetch container details. Please try again.
 											</TableCell>
-											<TableCell>
-												<StatusTooltip
-													status={mapContainerStateToStatus(
-														container.state,
-														container.health,
-													)}
-												/>
-											</TableCell>
-											<TableCell>
-												<HealthStatusBadge container={container} />
-											</TableCell>
-											<TableCell>
-												<UptimeDisplay container={container} />
-											</TableCell>
-											<TableCell className="text-right">
-												<div className="flex justify-end gap-2">
-													<Button
-														variant="outline"
-														size="sm"
-														onClick={() => {
-															// Use the selected container from the row
-															const selectedContainer = enrichedContainers.find(
-																(c) => c.containerId === container.containerId,
-															);
+										</TableRow>
+									);
+								}
 
-															if (
-																!selectedContainer?.containerId ||
-																!selectedContainer?.name
-															) {
-																console.warn(
-																	"Invalid container for logs:",
-																	selectedContainer,
-																);
-																return;
-															}
-
-															// Update container selection state
-															setContainerAppName(selectedContainer.name);
-															setContainerId(selectedContainer.containerId);
-
-															// Preserve all existing query parameters
-															const query = {
-																...router.query,
-																tab: "logs",
-																containerId: selectedContainer.containerId,
-																containerName: selectedContainer.name,
-															};
-
-															// Enhanced debug logging
-															console.debug("Routing to logs:", {
-																query,
-																selectedContainer: {
-																	id: selectedContainer.containerId,
-																	name: selectedContainer.name,
-																	state: selectedContainer.state,
-																	health: selectedContainer.health?.Status,
-																	startedAt: selectedContainer.startedAt,
-																},
-																currentPath: router.pathname,
-																currentQuery: router.query,
-															});
-
-															// Use consistent routing with query preservation
-															void router.push(
-																{
-																	pathname: router.pathname,
-																	query,
-																},
-																undefined,
-																{ shallow: true },
-															);
-														}}
-													>
-														<FileText className="h-4 w-4 mr-2" />
-														Logs
-													</Button>
-													<Button
-														variant="outline"
-														size="sm"
-														onClick={() => {
-															// Use the selected container from the row
-															const selectedContainer = enrichedContainers.find(
-																(c) => c.containerId === container.containerId,
-															);
-
-															if (
-																!selectedContainer?.containerId ||
-																!selectedContainer?.name
-															) {
-																console.warn(
-																	"Invalid container for monitoring:",
-																	selectedContainer,
-																);
-																return;
-															}
-
-															// Update container selection state
-															setContainerAppName(selectedContainer.name);
-															setContainerId(selectedContainer.containerId);
-
-															// Preserve all existing query parameters
-															const query = {
-																...router.query,
-																tab: "monitoring",
-																containerId: selectedContainer.containerId,
-																containerName: selectedContainer.name,
-															};
-
-															// Enhanced debug logging
-															console.debug("Routing to monitoring:", {
-																query,
-																selectedContainer: {
-																	id: selectedContainer.containerId,
-																	name: selectedContainer.name,
-																	state: selectedContainer.state,
-																	health: selectedContainer.health?.Status,
-																	startedAt: selectedContainer.startedAt,
-																},
-																currentPath: router.pathname,
-																currentQuery: router.query,
-															});
-
-															// Use consistent routing with query preservation
-															void router.push(
-																{
-																	pathname: router.pathname,
-																	query,
-																},
-																undefined,
-																{ shallow: true },
-															);
-														}}
-													>
-														<ExternalLink className="h-4 w-4 mr-2" />
-														Monitor
-													</Button>
+								if (
+									isLoadingServices ||
+									isLoadingContainers ||
+									isLoadingConfigs
+								) {
+									return (
+										<TableRow>
+											<TableCell colSpan={5} className="h-24 text-center">
+												<div className="flex flex-col items-center justify-center gap-2">
+													<Loader2 className="h-6 w-6 animate-spin" />
+													<div className="text-sm text-muted-foreground">
+														{isLoadingServices && "Loading services..."}
+														{isLoadingContainers && "Loading containers..."}
+														{isLoadingConfigs && "Loading container details..."}
+													</div>
 												</div>
 											</TableCell>
 										</TableRow>
 									);
-								})
-							)}
+								}
+
+								if (enrichedContainers.length === 0) {
+									return (
+										<TableRow>
+											<TableCell colSpan={5} className="h-24 text-center">
+												No containers found
+											</TableCell>
+										</TableRow>
+									);
+								}
+
+								return (
+									<>
+										{enrichedContainers.map((container) => {
+											const isSelected = container.containerId === containerId;
+											return (
+												<TableRow
+													key={container.containerId}
+													className={isSelected ? "bg-muted/50" : ""}
+												>
+													<TableCell className="font-medium">
+														{container.name}
+													</TableCell>
+													<TableCell>
+														<StatusTooltip
+															status={mapContainerStateToStatus(
+																container.state,
+																container.health,
+															)}
+														/>
+													</TableCell>
+													<TableCell>
+														<HealthStatusBadge container={container} />
+													</TableCell>
+													<TableCell>
+														<UptimeDisplay container={container} />
+													</TableCell>
+													<TableCell className="text-right">
+														<div className="flex justify-end gap-2">
+															<Button
+																variant="outline"
+																size="sm"
+																onClick={() => {
+																	handleContainerSelect(container, "logs");
+																}}
+															>
+																<FileText className="h-4 w-4 mr-2" />
+																Logs
+															</Button>
+															<Button
+																variant="outline"
+																size="sm"
+																onClick={() => {
+																	handleContainerSelect(
+																		container,
+																		"monitoring",
+																	);
+																}}
+															>
+																<ExternalLink className="h-4 w-4 mr-2" />
+																Monitor
+															</Button>
+														</div>
+													</TableCell>
+												</TableRow>
+											);
+										})}
+									</>
+								);
+							})()}
 						</TableBody>
 					</Table>
 				</ScrollArea>
@@ -856,3 +861,5 @@ export const ShowOverviewCompose = ({
 		</Card>
 	);
 };
+
+export default ShowOverviewCompose;
