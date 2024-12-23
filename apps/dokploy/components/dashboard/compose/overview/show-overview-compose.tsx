@@ -155,6 +155,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		},
 	);
 	// Simplified query enabling - remove dependency on containerDetails.length
+	// Simplified query enabling logic to match monitoring tab pattern
 	const { data: containerConfigs = [] } =
 		api.docker.getContainersConfig.useQuery(
 			{
@@ -164,7 +165,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				containerIds: containerDetails?.map((c) => c.containerId) || [],
 			},
 			{
-				enabled: !!compose?.appName && !!serverId,
+				enabled: !!composeId && !!serverId,
 				refetchInterval: 5000 as const,
 				retry: 3,
 				onError: (error) => {
@@ -203,18 +204,33 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		return partialMatch;
 	};
 
-	// Enhanced container data processing with proper typing
+	// Enhanced container data processing with strict type checking and validation
 	const enrichedContainers = useMemo((): Container[] => {
-		console.debug("Processing container data:", {
-			containerDetailsLength: containerDetails?.length,
-			containerConfigsLength: containerConfigs?.length,
-		});
+		if (!containerDetails || !containerConfigs) {
+			console.debug("Missing container data:", {
+				hasDetails: !!containerDetails,
+				hasConfigs: !!containerConfigs,
+			});
+			return [];
+		}
 
-		return (
-			containerDetails?.map((detail): Container => {
-				const config = containerConfigs?.find(
+		return containerDetails
+			.filter((detail): detail is NonNullable<typeof detail> => {
+				const isValid = !!(
+					detail?.name &&
+					detail?.containerId &&
+					detail?.state
+				);
+				if (!isValid) {
+					console.warn("Invalid container detail:", detail);
+				}
+				return isValid;
+			})
+			.map((detail): Container => {
+				const config = containerConfigs.find(
 					(c: ContainerConfig) => c.Id === detail.containerId,
 				);
+
 				console.debug(`Processing container ${detail.name}:`, {
 					containerId: detail.containerId,
 					hasConfig: !!config,
@@ -222,7 +238,6 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 					health: config?.State?.Health?.Status,
 				});
 
-				// Ensure we return an object that exactly matches the Container interface
 				return {
 					name: detail.name,
 					containerId: detail.containerId,
@@ -230,39 +245,19 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 					health: config?.State?.Health,
 					startedAt: config?.State?.StartedAt,
 				};
-			}) || []
-		);
+			});
 	}, [containerDetails, containerConfigs]);
 
-	// Match monitoring tab's container selection pattern with proper type safety
+	// Simplified container selection with stable hook ordering
 	useEffect(() => {
-		console.debug("Container selection effect running", {
-			queryContainerId: router.query.containerId,
-			enrichedContainersLength: enrichedContainers?.length,
-		});
-
-		// Ensure we have valid container data
-		if (!Array.isArray(enrichedContainers) || enrichedContainers.length === 0) {
-			console.debug("No containers available");
-			return;
-		}
-
-		// Get first container safely
-		const firstContainer = enrichedContainers[0];
-		if (!firstContainer?.name || !firstContainer?.containerId) {
-			console.warn("Invalid first container data:", firstContainer);
+		if (!enrichedContainers.length) {
+			console.debug("No containers available yet");
 			return;
 		}
 
 		const selectContainer = (container: Container) => {
-			if (!container?.name || !container?.containerId) {
-				console.warn("Invalid container data:", container);
-				return;
-			}
-
 			console.debug("Selecting container:", {
 				name: container.name,
-				startedAt: container.startedAt,
 				containerId: container.containerId,
 			});
 
@@ -281,35 +276,51 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			);
 		};
 
+		// Try to select container from query ID first
 		if (router.query.containerId) {
 			const container = enrichedContainers.find(
-				(c) => c?.containerId === router.query.containerId,
+				(c) => c.containerId === router.query.containerId,
 			);
 			if (container) {
 				selectContainer(container);
-			} else {
-				// If container not found by ID, fall back to first container
-				console.debug("Container not found by ID, falling back to first:", {
-					firstContainerId: firstContainer.containerId,
-					firstContainerName: firstContainer.name,
+				return;
+			}
+		}
+
+		// Fall back to first container if no match or no query ID
+		if (enrichedContainers.length > 0) {
+			// Ensure container exists and has required properties
+			const firstContainer = enrichedContainers[0];
+			if (firstContainer?.name && firstContainer?.containerId) {
+				console.debug("Selecting first container:", {
+					name: firstContainer.name,
+					containerId: firstContainer.containerId,
 				});
 				selectContainer(firstContainer);
+			} else {
+				console.warn(
+					"First container is missing required properties:",
+					firstContainer,
+				);
 			}
 		} else {
-			// No container ID in query, use first container
-			console.debug("No container ID in query, using first:", {
-				firstContainerId: firstContainer.containerId,
-				firstContainerName: firstContainer.name,
-			});
-			selectContainer(firstContainer);
+			console.debug("No containers available for selection");
 		}
-	}, [enrichedContainers, router.query.containerId]);
+	}, [enrichedContainers, router.query.containerId, router.query]);
 
-	// Map container state and health to status with proper typing
+	// Map container state and health to status with proper typing and detailed logging
 	const mapContainerStateToStatus = (
 		state: DockerContainerState | string,
 		health?: ContainerHealth,
 	): "idle" | "error" | "done" | "running" => {
+		// Log input state for debugging
+		console.debug("Mapping container state to status:", {
+			state,
+			healthStatus: health?.Status,
+			healthFailingStreak: health?.FailingStreak,
+			hasHealthLogs: !!health?.Log?.length,
+		});
+
 		// Prioritize health status if available
 		if (health?.Status) {
 			const healthStatus = health.Status.toLowerCase();
@@ -321,29 +332,55 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				case "starting":
 					return "idle";
 				default:
-					console.debug(`Unknown health status: ${healthStatus}`);
+					console.warn(`Unknown health status: ${healthStatus}`, {
+						failingStreak: health.FailingStreak,
+						logEntries: health.Log?.length,
+					});
+				// Fall through to container state check
 			}
 		}
 
-		// Fallback to container state
-		const containerState = state.toLowerCase() as DockerContainerState;
+		// Normalize and validate container state
+		const normalizedState = state.toLowerCase().trim();
+		if (!normalizedState) {
+			console.warn("Empty container state received");
+			return "error";
+		}
+
+		// Map container state with detailed logging
+		const containerState = normalizedState as DockerContainerState;
+		let status: "idle" | "error" | "done" | "running";
+
 		switch (containerState) {
 			case "running":
-				return "running";
+				status = "running";
+				break;
 			case "exited":
-				return "error";
+				status = "error";
+				break;
 			case "created":
 			case "paused":
-				return "idle";
+				status = "idle";
+				break;
 			case "restarting":
-				return "running";
+				status = "running";
+				break;
 			case "removing":
 			case "dead":
-				return "error";
+				status = "error";
+				break;
 			default:
 				console.warn(`Unknown container state: ${containerState}`);
-				return "idle";
+				status = "idle";
 		}
+
+		console.debug("Mapped container state:", {
+			originalState: state,
+			normalizedState,
+			resultStatus: status,
+		});
+
+		return status;
 	};
 
 	return (
@@ -367,10 +404,11 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 							if (container) {
 								console.debug("Found matching container:", {
 									name: container.name,
-									startedAt: container.startedAt,
+									containerId: container.containerId,
 								});
 								setContainerAppName(value);
 								setContainerId(container.containerId);
+								// Preserve all query parameters when updating container
 								void router.push(
 									{
 										query: {
@@ -469,42 +507,88 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 												/>
 											</TableCell>
 											<TableCell>
-												<Badge
-													variant={
-														container.health?.Status?.toLowerCase() ===
-														"healthy"
-															? "default"
-															: container.health?.Status?.toLowerCase() ===
-																	"unhealthy"
-																? "destructive"
-																: "secondary"
+												{(() => {
+													// Safely access and normalize health status
+													const healthStatus =
+														container.health?.Status?.toLowerCase() ?? null;
+													const hasHealth = !!container.health?.Status;
+
+													console.debug(
+														`Health status for ${container.name}:`,
+														{
+															status: healthStatus,
+															hasHealth,
+															failingStreak: container.health?.FailingStreak,
+														},
+													);
+
+													// Determine badge variant and class based on health status
+													let variant: "default" | "destructive" | "secondary" =
+														"secondary";
+													let className: string | undefined;
+
+													if (healthStatus === "healthy") {
+														variant = "default";
+														className = "bg-green-500 hover:bg-green-500/90";
+													} else if (healthStatus === "unhealthy") {
+														variant = "destructive";
 													}
-													className={
-														container.health?.Status?.toLowerCase() ===
-														"healthy"
-															? "bg-green-500 hover:bg-green-500/90"
-															: undefined
-													}
-												>
-													{container.health?.Status || "No health check"}
-												</Badge>
+
+													return (
+														<Badge variant={variant} className={className}>
+															{(() => {
+																// Ensure health status exists before accessing
+																if (hasHealth && container.health?.Status) {
+																	return container.health.Status;
+																}
+																return "No health check";
+															})()}
+														</Badge>
+													);
+												})()}
 											</TableCell>
 											<TableCell>
 												{(() => {
 													try {
-														if (!container?.startedAt) return "-";
-														const startDate = new Date(container.startedAt);
-														if (Number.isNaN(startDate.getTime())) {
-															console.warn(
-																`Invalid startedAt date: ${container.startedAt}`,
+														if (!container?.startedAt) {
+															console.debug(
+																`No startedAt for container ${container.name}`,
 															);
 															return "-";
 														}
-														return formatDistanceToNow(startDate, {
+
+														// Parse and validate the date
+														const startDate = new Date(container.startedAt);
+														if (Number.isNaN(startDate.getTime())) {
+															console.warn(
+																`Invalid startedAt date for ${container.name}:`,
+																container.startedAt,
+															);
+															return "-";
+														}
+
+														// Ensure date is not in the future
+														if (startDate > new Date()) {
+															console.warn(
+																`Future startedAt date for ${container.name}:`,
+																container.startedAt,
+															);
+															return "-";
+														}
+
+														const uptime = formatDistanceToNow(startDate, {
 															addSuffix: true,
 														});
+														console.debug(`Uptime for ${container.name}:`, {
+															startedAt: container.startedAt,
+															uptime,
+														});
+														return uptime;
 													} catch (error) {
-														console.error("Error formatting uptime:", error);
+														console.error(
+															`Error formatting uptime for ${container.name}:`,
+															error,
+														);
 														return "-";
 													}
 												})()}
@@ -515,20 +599,24 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 														variant="outline"
 														size="sm"
 														onClick={() => {
-															// Find matching container and update query
-															const matchingContainer = containerDetails?.find(
-																(c) => c.containerId === container.containerId,
-															);
-															if (matchingContainer) {
-																const query = {
-																	...router.query,
-																	tab: "logs",
-																	containerId: matchingContainer.containerId,
-																};
-																void router.push({ query }, undefined, {
-																	shallow: true,
-																});
+															// Use enriched container data for consistent routing
+															// Ensure container has required properties before routing
+															if (!container?.containerId) {
+																console.warn(
+																	"Invalid container for logs:",
+																	container,
+																);
+																return;
 															}
+															const query = {
+																...router.query,
+																tab: "logs",
+																containerId: container.containerId,
+															};
+															console.debug("Routing to logs:", query);
+															void router.push({ query }, undefined, {
+																shallow: true,
+															});
 														}}
 													>
 														<FileText className="h-4 w-4 mr-2" />
@@ -538,20 +626,24 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 														variant="outline"
 														size="sm"
 														onClick={() => {
-															// Find matching container and update query
-															const matchingContainer = containerDetails?.find(
-																(c) => c.containerId === container.containerId,
-															);
-															if (matchingContainer) {
-																const query = {
-																	...router.query,
-																	tab: "monitoring",
-																	containerId: matchingContainer.containerId,
-																};
-																void router.push({ query }, undefined, {
-																	shallow: true,
-																});
+															// Use enriched container data for consistent routing
+															// Ensure container has required properties before routing
+															if (!container?.containerId) {
+																console.warn(
+																	"Invalid container for monitoring:",
+																	container,
+																);
+																return;
 															}
+															const query = {
+																...router.query,
+																tab: "monitoring",
+																containerId: container.containerId,
+															};
+															console.debug("Routing to monitoring:", query);
+															void router.push({ query }, undefined, {
+																shallow: true,
+															});
 														}}
 													>
 														<ExternalLink className="h-4 w-4 mr-2" />
