@@ -266,6 +266,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 
 			void router.push(
 				{
+					pathname: router.pathname,
 					query: {
 						...router.query,
 						containerId: container.containerId,
@@ -614,9 +615,14 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 																containerId: container.containerId,
 															};
 															console.debug("Routing to logs:", query);
-															void router.push({ query }, undefined, {
-																shallow: true,
-															});
+															void router.push(
+																{
+																	pathname: router.pathname,
+																	query,
+																},
+																undefined,
+																{ shallow: true },
+															);
 														}}
 													>
 														<FileText className="h-4 w-4 mr-2" />
@@ -641,9 +647,14 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 																containerId: container.containerId,
 															};
 															console.debug("Routing to monitoring:", query);
-															void router.push({ query }, undefined, {
-																shallow: true,
-															});
+															void router.push(
+																{
+																	pathname: router.pathname,
+																	query,
+																},
+																undefined,
+																{ shallow: true },
+															);
 														}}
 													>
 														<ExternalLink className="h-4 w-4 mr-2" />
