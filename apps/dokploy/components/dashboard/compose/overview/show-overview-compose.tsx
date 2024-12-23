@@ -205,7 +205,7 @@ export const ShowOverviewCompose = ({
 				type: "fetch",
 			},
 			{
-				enabled: !!composeId,
+				enabled: !!serverId && !!appName,
 				refetchInterval: 5000 as const, // Refresh every 5 seconds for real-time updates
 				retry: 3,
 				onError: (error) => {
@@ -253,7 +253,7 @@ export const ShowOverviewCompose = ({
 					.map((c) => c.containerId) || [],
 		},
 		{
-			enabled: !!composeId && !!serverId && !!appName,
+			enabled: !!serverId && !!appName,
 			refetchInterval: 5000 as const,
 			retry: 3,
 			onError: (error) => {
@@ -621,11 +621,16 @@ export const ShowOverviewCompose = ({
 										Failed to fetch container details. Please try again.
 									</TableCell>
 								</TableRow>
-							) : isLoadingServices || isLoadingContainers ? (
+							) : isLoadingServices || isLoadingContainers || isLoadingConfigs ? (
 								<TableRow>
 									<TableCell colSpan={5} className="h-24 text-center">
-										<div className="flex items-center justify-center">
+										<div className="flex flex-col items-center justify-center gap-2">
 											<Loader2 className="h-6 w-6 animate-spin" />
+											<div className="text-sm text-muted-foreground">
+												{isLoadingServices && "Loading services..."}
+												{isLoadingContainers && "Loading containers..."}
+												{isLoadingConfigs && "Loading container details..."}
+											</div>
 										</div>
 									</TableCell>
 								</TableRow>
