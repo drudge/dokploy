@@ -3,7 +3,7 @@ import {
 	execAsyncRemote,
 } from "@dokploy/server/utils/process/execAsync";
 
-export const getContainers = async (serverId?: string | null) => {
+export const getContainers = async (serverId?: string) => {
 	try {
 		const command =
 			"docker ps -a --format 'CONTAINER ID : {{.ID}} | Name: {{.Names}} | Image: {{.Image}} | Ports: {{.Ports}} | State: {{.State}} | Status: {{.Status}}'";
@@ -68,10 +68,7 @@ export const getContainers = async (serverId?: string | null) => {
 	}
 };
 
-export const getConfig = async (
-	containerId: string,
-	serverId?: string | null,
-) => {
+export const getConfig = async (containerId: string, serverId?: string) => {
 	try {
 		const command = `docker inspect ${containerId} --format='{{json .}}'`;
 		let stdout = "";
@@ -87,14 +84,16 @@ export const getConfig = async (
 		}
 
 		if (stderr) {
-			console.error(`Error: ${stderr}`);
-			return;
+			console.error(`Error inspecting container ${containerId}:`, stderr);
+			return null;
 		}
 
 		const config = JSON.parse(stdout);
-
 		return config;
-	} catch (error) {}
+	} catch (error) {
+		console.error("Failed to getConfig for container:", containerId, error);
+		return null;
+	}
 };
 
 export const getContainersByAppNameMatch = async (
@@ -223,4 +222,16 @@ export const containerRestart = async (containerId: string) => {
 
 		return config;
 	} catch (error) {}
+};
+
+export const getContainersConfig = async (
+	containerIds: string[],
+	serverId?: string | null,
+) => {
+	const configs = await Promise.all(
+		containerIds.map((id) => getConfig(id, serverId || undefined)),
+	);
+	return configs.filter(
+		(config): config is NonNullable<typeof config> => config !== null,
+	);
 };

@@ -46,18 +46,18 @@ import {
 	createDeploymentPreview,
 	updateDeploymentStatus,
 } from "./deployment";
-import { validUniqueServerAppName } from "./project";
-import {
-	findPreviewDeploymentById,
-	updatePreviewDeployment,
-} from "./preview-deployment";
+import { type Domain, getDomainHost } from "./domain";
 import {
 	createPreviewDeploymentComment,
 	getIssueComment,
 	issueCommentExists,
 	updateIssueComment,
 } from "./github";
-import { type Domain, getDomainHost } from "./domain";
+import {
+	findPreviewDeploymentById,
+	updatePreviewDeployment,
+} from "./preview-deployment";
+import { validUniqueServerAppName } from "./project";
 export type Application = typeof applications.$inferSelect;
 
 export const createApplication = async (

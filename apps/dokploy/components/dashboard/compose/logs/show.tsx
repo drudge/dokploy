@@ -18,6 +18,7 @@ import {
 import { api } from "@/utils/api";
 import { Loader, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 export const DockerLogs = dynamic(
 	() =>
@@ -51,12 +52,15 @@ export const ShowDockerLogsCompose = ({
 		},
 	);
 	const [containerId, setContainerId] = useState<string | undefined>();
+	const router = useRouter();
 
 	useEffect(() => {
-		if (data && data?.length > 0) {
+		if (router.query.containerId) {
+			setContainerId(router.query.containerId.toString());
+		} else if (data && data?.length > 0) {
 			setContainerId(data[0]?.containerId);
 		}
-	}, [data]);
+	}, [data, router.query.containerId]);
 
 	return (
 		<Card className="bg-background">
