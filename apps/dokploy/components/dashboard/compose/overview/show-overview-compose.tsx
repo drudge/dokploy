@@ -82,39 +82,25 @@ interface Container {
 
 interface Props {
 	composeId: string;
+	serverId: string;
+	appName: string;
+	appType: "docker-compose" | "stack";
 }
 
-type ComposeType = {
-	composeId: string;
-	appName: string;
-	composeType: "docker-compose" | "stack";
-	serverId: string | undefined;
-};
 import { ExternalLink, FileText } from "lucide-react";
 import { useRouter } from "next/router";
 import React from "react";
 
-interface Props {
-	composeId: string;
-}
-
-export const ShowOverviewCompose = ({ composeId }: Props) => {
+export const ShowOverviewCompose = ({
+	composeId,
+	serverId,
+	appName,
+	appType,
+}: Props) => {
 	const router = useRouter();
 
 	const [containerAppName, setContainerAppName] = useState<string>();
 	const [containerId, setContainerId] = useState<string>();
-
-	// Get compose data
-	const { data: compose, isLoading: isLoadingCompose } =
-		api.compose.one.useQuery(
-			{ composeId },
-			{
-				enabled: !!composeId,
-			},
-		);
-
-	// Get serverId early to use in queries
-	const serverId = compose?.serverId;
 
 	// Simplified services query with better error handling
 	const { data: services = [], isLoading: isLoadingServices } =
@@ -134,16 +120,16 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		);
 
 	// Query container details with real-time updates
-	// Simplified container details query with better type handling
+	// Using props directly for better type safety
 	const {
 		data: containerDetails = [],
 		isLoading: isLoadingContainers,
 		error: containerError,
 	} = api.docker.getContainersByAppNameMatch.useQuery(
 		{
-			appName: compose?.appName || "",
-			appType: compose?.composeType || "docker-compose",
-			serverId: serverId || "",
+			appName,
+			appType,
+			serverId,
 		},
 		{
 			enabled: !!composeId,
@@ -163,16 +149,16 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 		isLoading: isLoadingConfigs,
 	} = api.docker.getContainersConfig.useQuery(
 		{
-			appName: compose?.appName || "",
-			appType: compose?.composeType || "docker-compose",
-			serverId: typeof serverId === "string" ? serverId : "",
+			appName,
+			appType,
+			serverId,
 			containerIds: containerDetails?.map((c) => c.containerId) || [],
 		},
 		{
 			enabled:
 				!!composeId &&
-				typeof serverId === "string" &&
-				!!compose?.appName &&
+				!!serverId &&
+				!!appName &&
 				(containerDetails?.length ?? 0) > 0,
 			refetchInterval: 5000 as const,
 			retry: 3,
@@ -180,7 +166,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 				console.error("Failed to fetch container configs:", error, {
 					composeId,
 					serverId,
-					appName: compose?.appName,
+					appName,
 					containerCount: containerDetails?.length,
 				});
 			},
@@ -361,7 +347,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 
 		// Normalize and validate state with better error handling
 		const normalizedState = (state || "").toLowerCase().trim();
-		
+
 		if (!normalizedState) {
 			console.warn("Empty or invalid container state received", {
 				originalState: state,
@@ -403,7 +389,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 						logCount: health.Log?.length,
 						lastLog: hasLogs ? health.Log?.[0] : undefined,
 					});
-					// Fall through to container state check
+				// Fall through to container state check
 			}
 		} else {
 			console.debug("No health status available, using container state", {
@@ -462,9 +448,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 			<CardHeader>
 				<div className="flex flex-row gap-2 justify-between flex-wrap">
 					<CardTitle className="text-xl">Services Overview</CardTitle>
-					<Badge>
-						{compose?.composeType === "docker-compose" ? "Compose" : "Stack"}
-					</Badge>
+					<Badge>{appType === "docker-compose" ? "Compose" : "Stack"}</Badge>
 				</div>
 			</CardHeader>
 			<CardContent>
@@ -545,9 +529,7 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 										Failed to fetch container details. Please try again.
 									</TableCell>
 								</TableRow>
-							) : isLoadingCompose ||
-								isLoadingServices ||
-								isLoadingContainers ? (
+							) : isLoadingServices || isLoadingContainers ? (
 								<TableRow>
 									<TableCell colSpan={5} className="h-24 text-center">
 										<div className="flex items-center justify-center">
@@ -586,7 +568,8 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 													const healthStatus =
 														container.health?.Status?.toLowerCase() ?? null;
 													const hasHealth = !!container.health?.Status;
-													const failingStreak = container.health?.FailingStreak ?? 0;
+													const failingStreak =
+														container.health?.FailingStreak ?? 0;
 													const healthLogs = container.health?.Log ?? [];
 
 													console.debug(
@@ -729,9 +712,12 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 																	state: container.state,
 																	health: container.health?.Status,
 																	uptime: container.startedAt
-																		? formatDistanceToNow(new Date(container.startedAt), {
-																				addSuffix: true,
-																		  })
+																		? formatDistanceToNow(
+																				new Date(container.startedAt),
+																				{
+																					addSuffix: true,
+																				},
+																			)
 																		: undefined,
 																},
 															});
@@ -773,9 +759,12 @@ export const ShowOverviewCompose = ({ composeId }: Props) => {
 																	state: container.state,
 																	health: container.health?.Status,
 																	uptime: container.startedAt
-																		? formatDistanceToNow(new Date(container.startedAt), {
-																				addSuffix: true,
-																		  })
+																		? formatDistanceToNow(
+																				new Date(container.startedAt),
+																				{
+																					addSuffix: true,
+																				},
+																			)
 																		: undefined,
 																},
 															});
