@@ -254,55 +254,111 @@ export const ShowOverviewCompose = ({
 	appType,
 }: Props) => {
 	const router = useRouter();
+	const projectId = typeof router.query.projectId === "string" ? router.query.projectId : undefined;
 
 	const [containerAppName, setContainerAppName] = useState<string>();
 	const [containerId, setContainerId] = useState<string>();
 
+	// Ensure we have required route parameters
+	useEffect(() => {
+		if (!projectId) {
+			console.warn("Missing or invalid projectId in route parameters");
+		}
+	}, [projectId]);
+
 	// Container selection handler with consistent hook usage
+	// Handle container selection in overview tab
 	const handleContainerSelect = useCallback(
-		(container: Container, targetTab: "logs" | "monitoring") => {
+		(container: Container) => {
 			if (!container?.containerId || !container?.name) {
-				console.warn(`Invalid container for ${targetTab}:`, container);
+				console.warn("Invalid container selected:", container);
 				return;
 			}
+
+			console.debug("Selecting container:", {
+				containerId: container.containerId,
+				name: container.name,
+				state: container.state,
+			});
 
 			// Update container selection state
 			setContainerAppName(container.name);
 			setContainerId(container.containerId);
 
-			// Preserve all existing query parameters
-			const query = {
-				...router.query,
-				tab: targetTab,
-				containerId: container.containerId,
-				containerName: container.name,
-			};
-
-			// Enhanced debug logging
-			console.debug(`Routing to ${targetTab}:`, {
-				query,
-				selectedContainer: {
-					id: container.containerId,
-					name: container.name,
-					state: container.state,
-					health: container.health?.Status,
-					startedAt: container.startedAt,
-				},
-				currentPath: router.pathname,
-				currentQuery: router.query,
-			});
-
-			// Use consistent routing with query preservation
+			// Update URL with selected container ID
 			void router.push(
 				{
 					pathname: router.pathname,
-					query,
+					query: {
+						...router.query,
+						containerId: container.containerId,
+					},
 				},
 				undefined,
 				{ shallow: true },
 			);
 		},
 		[router],
+	);
+
+	// Handle navigation to logs view
+	const handleViewLogs = useCallback(
+		(container: Container) => {
+			if (!container?.containerId) {
+				console.warn("Cannot view logs: Invalid container:", container);
+				return;
+			}
+
+			if (!projectId) {
+				console.warn("Cannot view logs: Missing projectId in route");
+				return;
+			}
+
+			console.debug("Navigating to logs view:", {
+				containerId: container.containerId,
+				name: container.name,
+				projectId,
+			});
+
+			void router.push({
+				pathname: `/dashboard/project/${projectId}/services/compose/${composeId}/logs`,
+				query: {
+					...router.query,
+					containerId: container.containerId,
+				},
+			});
+		},
+		[router, projectId, composeId],
+	);
+
+	// Handle navigation to monitoring view
+	const handleViewMonitoring = useCallback(
+		(container: Container) => {
+			if (!container?.containerId) {
+				console.warn("Cannot view monitoring: Invalid container:", container);
+				return;
+			}
+
+			if (!projectId) {
+				console.warn("Cannot view monitoring: Missing projectId in route");
+				return;
+			}
+
+			console.debug("Navigating to monitoring view:", {
+				containerId: container.containerId,
+				name: container.name,
+				projectId,
+			});
+
+			void router.push({
+				pathname: `/dashboard/project/${projectId}/services/compose/${composeId}/monitoring`,
+				query: {
+					...router.query,
+					containerId: container.containerId,
+				},
+			});
+		},
+		[router, projectId, composeId],
 	);
 
 	// Simplified services query with better error handling
@@ -499,9 +555,9 @@ export const ShowOverviewCompose = ({
 		// Log overall container processing results
 		console.debug("Processed containers:", {
 			totalCount: containers.length,
-			withHealth: containers.filter(c => !!c.health).length,
-			withStartTime: containers.filter(c => !!c.startedAt).length,
-			states: containers.map(c => c.state),
+			withHealth: containers.filter((c) => !!c.health).length,
+			withStartTime: containers.filter((c) => !!c.startedAt).length,
+			states: containers.map((c) => c.state),
 		});
 
 		return containers;
@@ -581,7 +637,10 @@ export const ShowOverviewCompose = ({
 		if (!attemptContainerSelection()) {
 			console.warn("Failed to select any container:", {
 				queryId: router.query.containerId,
-				availableContainers: enrichedContainers.map(c => ({ id: c.containerId, name: c.name })),
+				availableContainers: enrichedContainers.map((c) => ({
+					id: c.containerId,
+					name: c.name,
+				})),
 			});
 		}
 	}, [
@@ -858,9 +917,13 @@ export const ShowOverviewCompose = ({
 															<Button
 																variant="outline"
 																size="sm"
-																onClick={() => {
-																	handleContainerSelect(container, "logs");
-																}}
+																onClick={() => handleViewLogs(container)}
+																disabled={!container?.containerId}
+																title={
+																	container?.containerId
+																		? "View container logs"
+																		: "Container ID not available"
+																}
 															>
 																<FileText className="h-4 w-4 mr-2" />
 																Logs
@@ -868,12 +931,13 @@ export const ShowOverviewCompose = ({
 															<Button
 																variant="outline"
 																size="sm"
-																onClick={() => {
-																	handleContainerSelect(
-																		container,
-																		"monitoring",
-																	);
-																}}
+																onClick={() => handleViewMonitoring(container)}
+																disabled={!container?.containerId}
+																title={
+																	container?.containerId
+																		? "View container monitoring"
+																		: "Container ID not available"
+																}
 															>
 																<ExternalLink className="h-4 w-4 mr-2" />
 																Monitor
