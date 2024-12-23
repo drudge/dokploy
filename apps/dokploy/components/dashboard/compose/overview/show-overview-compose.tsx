@@ -93,97 +93,150 @@ import React, { memo } from "react";
 
 // Separate components for better organization and hook consistency
 const HealthStatusBadge = memo(({ container }: { container: Container }) => {
-	// Enhanced health status processing with validation
-	const healthStatus = container.health?.Status?.toLowerCase() ?? null;
-	const hasHealth = !!container.health?.Status;
-	const failingStreak = container.health?.FailingStreak ?? 0;
-	const healthLogs = container.health?.Log ?? [];
+	const { variant, className, label, tooltip } = useMemo(() => {
+		// Enhanced health status processing with validation
+		const healthStatus = container.health?.Status?.toLowerCase() ?? null;
+		const hasHealth = !!container.health?.Status;
+		const failingStreak = container.health?.FailingStreak ?? 0;
+		const healthLogs = container.health?.Log ?? [];
+		const lastLog = healthLogs[0];
 
-	console.debug(`Health status for ${container.name}:`, {
-		status: healthStatus,
-		hasHealth,
-		failingStreak,
-		logCount: healthLogs.length,
-		rawHealth: container.health,
-		containerState: container.state,
-	});
+		console.debug(`Health status for ${container.name}:`, {
+			status: healthStatus,
+			hasHealth,
+			failingStreak,
+			logCount: healthLogs.length,
+			rawHealth: container.health,
+			containerState: container.state,
+		});
 
-	// Determine badge variant and class based on health status
-	let variant: "default" | "destructive" | "secondary" = "secondary";
-	let className: string | undefined;
+		// Build detailed tooltip information
+		const tooltipParts = [];
+		if (hasHealth) {
+			tooltipParts.push(`Status: ${container.health?.Status}`);
+			if (failingStreak > 0) {
+				tooltipParts.push(`Failing Streak: ${failingStreak}`);
+			}
+			if (lastLog) {
+				tooltipParts.push(
+					`Last Check: ${new Date(lastLog.Start).toLocaleString()}`,
+					`Exit Code: ${lastLog.ExitCode}`,
+					`Output: ${lastLog.Output}`,
+				);
+			}
+		} else {
+			tooltipParts.push("No health check configured");
+		}
 
-	if (healthStatus === "healthy") {
-		variant = "default";
-		className = "bg-green-500 hover:bg-green-500/90";
-	} else if (healthStatus === "unhealthy") {
-		variant = "destructive";
-	}
+		// Determine badge variant and class based on health status
+		let variant: "default" | "destructive" | "secondary" | "warning" = "secondary";
+		let className: string | undefined;
+		let label = hasHealth ? container.health?.Status : "No health check";
+
+		if (healthStatus === "healthy") {
+			variant = "default";
+			className = "bg-green-500 hover:bg-green-500/90";
+		} else if (healthStatus === "unhealthy") {
+			variant = "destructive";
+			if (failingStreak > 0) {
+				label = `Unhealthy (${failingStreak} fails)`;
+			}
+		} else if (healthStatus === "starting") {
+			variant = "warning";
+			label = "Starting";
+		}
+
+		return {
+			variant,
+			className,
+			label,
+			tooltip: tooltipParts.join("\n"),
+		};
+	}, [container]);
 
 	return (
-		<Badge variant={variant} className={className}>
-			{hasHealth && container.health?.Status
-				? container.health.Status
-				: "No health check"}
+		<Badge variant={variant} className={className} title={tooltip}>
+			{label}
 		</Badge>
 	);
 });
 
 const UptimeDisplay = memo(({ container }: { container: Container }) => {
-	try {
-		if (!container?.startedAt) {
-			console.debug(`No startedAt for container ${container.name}:`, {
-				container,
-				state: container.state,
-				health: container.health?.Status,
-			});
-			return <>-</>;
-		}
+	const { uptime, tooltip } = useMemo(() => {
+		try {
+			if (!container?.startedAt) {
+				console.debug(`No startedAt for container ${container.name}:`, {
+					container,
+					state: container.state,
+					health: container.health?.Status,
+				});
+				return { uptime: "-", tooltip: "No start time available" };
+			}
 
-		const startDate = new Date(container.startedAt);
-		if (Number.isNaN(startDate.getTime())) {
-			console.warn(`Invalid startedAt date for ${container.name}:`, {
-				startedAt: container.startedAt,
-				container,
-			});
-			return <>-</>;
-		}
+			const startDate = new Date(container.startedAt);
+			if (Number.isNaN(startDate.getTime())) {
+				console.warn(`Invalid startedAt date for ${container.name}:`, {
+					startedAt: container.startedAt,
+					container,
+				});
+				return { uptime: "-", tooltip: "Invalid start time" };
+			}
 
-		const now = new Date();
-		if (startDate > now) {
-			console.warn(`Future startedAt date for ${container.name}:`, {
+			const now = new Date();
+			if (startDate > now) {
+				console.warn(`Future startedAt date for ${container.name}:`, {
+					startedAt: container.startedAt,
+					now: now.toISOString(),
+					diff: startDate.getTime() - now.getTime(),
+					container,
+				});
+				return { uptime: "-", tooltip: "Invalid future start time" };
+			}
+
+			const formattedUptime = formatDistanceToNow(startDate, {
+				addSuffix: true,
+				includeSeconds: true,
+			});
+
+			// Enhanced state-aware uptime display
+			const state = container.state?.toLowerCase();
+			const isRunning = state === "running";
+			const displayUptime = isRunning
+				? formattedUptime
+				: `${state?.charAt(0).toUpperCase()}${state?.slice(1)} ${formattedUptime}`;
+
+			const tooltipInfo = [
+				`Started: ${startDate.toLocaleString()}`,
+				`State: ${state}`,
+				container.health?.Status
+					? `Health: ${container.health.Status}`
+					: "No health check",
+			].join("\n");
+
+			console.debug(`Uptime for ${container.name}:`, {
 				startedAt: container.startedAt,
+				parsedStartDate: startDate.toISOString(),
+				uptime: formattedUptime,
+				displayUptime,
 				now: now.toISOString(),
-				diff: startDate.getTime() - now.getTime(),
-				container,
+				container: {
+					state: container.state,
+					health: container.health?.Status,
+				},
 			});
-			return <>-</>;
+
+			return { uptime: displayUptime, tooltip: tooltipInfo };
+		} catch (error) {
+			console.error(`Error formatting uptime for ${container.name}:`, {
+				error,
+				container,
+				startedAt: container.startedAt,
+			});
+			return { uptime: "-", tooltip: "Error calculating uptime" };
 		}
+	}, [container]);
 
-		const uptime = formatDistanceToNow(startDate, {
-			addSuffix: true,
-			includeSeconds: true,
-		});
-
-		console.debug(`Uptime for ${container.name}:`, {
-			startedAt: container.startedAt,
-			parsedStartDate: startDate.toISOString(),
-			uptime,
-			now: now.toISOString(),
-			container: {
-				state: container.state,
-				health: container.health?.Status,
-			},
-		});
-
-		return <>{uptime}</>;
-	} catch (error) {
-		console.error(`Error formatting uptime for ${container.name}:`, {
-			error,
-			container,
-			startedAt: container.startedAt,
-		});
-		return <>-</>;
-	}
+	return <span title={tooltip}>{uptime}</span>;
 });
 
 export const ShowOverviewCompose = ({
@@ -675,10 +728,13 @@ export const ShowOverviewCompose = ({
 														onClick={() => {
 															// Use the selected container from the row
 															const selectedContainer = enrichedContainers.find(
-																(c) => c.containerId === container.containerId
+																(c) => c.containerId === container.containerId,
 															);
 
-															if (!selectedContainer?.containerId || !selectedContainer?.name) {
+															if (
+																!selectedContainer?.containerId ||
+																!selectedContainer?.name
+															) {
 																console.warn(
 																	"Invalid container for logs:",
 																	selectedContainer,
@@ -732,10 +788,13 @@ export const ShowOverviewCompose = ({
 														onClick={() => {
 															// Use the selected container from the row
 															const selectedContainer = enrichedContainers.find(
-																(c) => c.containerId === container.containerId
+																(c) => c.containerId === container.containerId,
 															);
 
-															if (!selectedContainer?.containerId || !selectedContainer?.name) {
+															if (
+																!selectedContainer?.containerId ||
+																!selectedContainer?.name
+															) {
 																console.warn(
 																	"Invalid container for monitoring:",
 																	selectedContainer,
