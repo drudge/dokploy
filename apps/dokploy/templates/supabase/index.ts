@@ -62,6 +62,7 @@ export function generateSupabaseServiceJWT(secret: string): string {
 
 export function generate(schema: Schema): Template {
 	const mainDomain = generateRandomDomain(schema);
+	const deploymentUuid = generateBase64(8); // Generate a short unique ID for this deployment
 
 	const postgresPassword = generatePassword(32);
 	const jwtSecret = generateBase64(32);
@@ -78,8 +79,12 @@ export function generate(schema: Schema): Template {
 		},
 	];
 
+	// Store the deployment UUID in environment variables for use in container names and networks
+	const containerPrefix = `supabase-${deploymentUuid}`;
+
 	const envs = [
 		`SUPABASE_HOST=${mainDomain}`,
+		`DEPLOYMENT_UUID=${deploymentUuid}`,
 		`POSTGRES_PASSWORD=${postgresPassword}`,
 		`JWT_SECRET=${jwtSecret}`,
 		`ANON_KEY=${annonKey}`,

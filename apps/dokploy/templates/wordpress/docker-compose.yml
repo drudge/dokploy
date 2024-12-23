@@ -1,27 +1,50 @@
 version: "3.8"
 services:
   wordpress:
+    container_name: ${containerNames.wordpress}
     image: wordpress:5.8.3
-    environment:
-      WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_USER: exampleuser
-      WORDPRESS_DB_PASSWORD: examplepass
-      WORDPRESS_DB_NAME: exampledb
-    volumes:
-      - wordpress_data:/var/www/html
-
-  db:
-    image: mysql:5.7.34
     networks:
+      - ${networkName}
       - dokploy-network
     environment:
-      MYSQL_DATABASE: exampledb
-      MYSQL_USER: exampleuser
-      MYSQL_PASSWORD: examplepass
-      MYSQL_ROOT_PASSWORD: rootpass
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:-exampleuser}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:-examplepass}
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:-exampledb}
     volumes:
-      - db_data:/var/lib/mysql
+      - ${volumeNames.wordpress}:/var/www/html
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+
+  mysql:
+    container_name: ${containerNames.db}
+    image: mysql:5.7.34
+    networks:
+      - ${networkName}
+    environment:
+      MYSQL_DATABASE: ${WORDPRESS_DB_NAME:-exampledb}
+      MYSQL_USER: ${WORDPRESS_DB_USER:-exampleuser}
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD:-examplepass}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+    volumes:
+      - ${volumeNames.db}:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  ${networkName}:
+    name: ${networkName}
+    driver: overlay
+    attachable: true
+  dokploy-network:
+    external: true
 
 volumes:
-  wordpress_data:
-  db_data:
+  ${volumeNames.wordpress}:
+    name: ${volumeNames.wordpress}
+  ${volumeNames.db}:
+    name: ${volumeNames.db}
