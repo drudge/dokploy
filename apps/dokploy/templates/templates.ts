@@ -2,6 +2,22 @@ import type { TemplateData } from "./types/templates-data.type";
 
 export const templates: TemplateData[] = [
 	{
+		id: "appwrite",
+		name: "Appwrite",
+		version: "1.6.0",
+		description:
+			"Appwrite is an end-to-end backend server for Web, Mobile, Native, or Backend apps. Appwrite abstracts the complexity and repetitiveness required to build a modern backend API from scratch and allows you to build secure apps faster.\n" +
+			"Using Appwrite, you can easily integrate your app with user authentication and multiple sign-in methods, a database for storing and querying users and team data, storage and file management, image manipulation, Cloud Functions, messaging, and more services.",
+		links: {
+			github: "https://github.com/appwrite/appwrite",
+			website: "https://appwrite.io/",
+			docs: "https://appwrite.io/docs",
+		},
+		logo: "appwrite.svg",
+		tags: ["database", "firebase", "postgres"],
+		load: () => import("./appwrite/index").then((m) => m.generate),
+	},
+	{
 		id: "outline",
 		name: "Outline",
 		version: "0.81.0",
@@ -1422,6 +1438,21 @@ export const templates: TemplateData[] = [
 		logo: "spacedrive.png",
 		tags: ["file-manager", "vdfs", "storage"],
 		load: () => import("./spacedrive/index").then((m) => m.generate),
+	},
+	{
+		id: "registry",
+		name: "Docker Registry",
+		version: "2",
+		description:
+			"Distribution implementation for storing and distributing of Docker container images and artifacts.",
+		links: {
+			github: "https://github.com/distribution/distribution",
+			website: "https://hub.docker.com/_/registry",
+			docs: "https://distribution.github.io/distribution/",
+		},
+		logo: "registry.png",
+		tags: ["registry", "docker", "self-hosted"],
+		load: () => import("./registry/index").then((m) => m.generate),
 	},
 	{
 		id: "alist",
